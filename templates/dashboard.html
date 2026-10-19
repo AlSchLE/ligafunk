@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — {{ team.name }}{% endblock %}
+
+{% block content %}
+<div class="league-header">
+  <h1>👋 Welcome, {{ team.owner_name }}</h1>
+  <p class="tagline">{{ team.name }} — {{ league.name }}</p>
+</div>
+
+<div class="grid-4">
+  <div class="card dashboard-card">
+    <h2>📋 My Recaps</h2>
+    <p>Create and manage your team's recaps.</p>
+    <a href="{{ url_for('recap_new', league_code=league.league_code) }}" class="btn">+ New Recap</a>
+  </div>
+  <div class="card dashboard-card">
+    <h2>📜 League History</h2>
+    <p>View all recaps from your league.</p>
+    <a href="{{ url_for('league_history', league_code=league.league_code) }}" class="btn">View History</a>
+  </div>
+  <div class="card dashboard-card">
+    <h2>📤 Share</h2>
+    <p>Share recaps via WhatsApp, Signal, or webhook.</p>
+    <a href="{{ url_for('league_public', league_code=league.league_code) }}" class="btn">Share</a>
+  </div>
+  <div class="card dashboard-card">
+    <h2>📡 RSS Feed</h2>
+    <p>Subscribe to your league's RSS feed.</p>
+    <a href="{{ url_for('league_rss', league_code=league.league_code) }}" class="btn">RSS</a>
+  </div>
+</div>
+
+{% if recaps %}
+<div class="card">
+  <h2>📰 My Recent Recaps</h2>
+  <ul class="recap-list">
+    {% for r in recaps[:10] %}
+      <li>
+        <div class="recap-meta">
+          <span class="week-badge">Week {{ r.week }}</span>
+          <span class="recap-date">{{ r.created_at }}</span>
+        </div>
+        <a href="{{ url_for('league_recap', league_code=league.league_code, recap_id=r.id) }}" class="recap-title">View Recap</a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

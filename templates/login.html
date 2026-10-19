@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Login — {{ league.name }}{% endblock %}
+
+{% block content %}
+<div class="login-container">
+  <div class="card login-card">
+    <h1>🔐 Team Login</h1>
+    <p class="tagline">{{ league.name }}</p>
+    <form method="post">
+      <div class="form-group">
+        <label>Team</label>
+        <select name="team_id" required>
+          {% for t in teams %}
+            <option value="{{ t.id }}">{{ t.name }} ({{ t.owner_name }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" required placeholder="Team password">
+      </div>
+      <button type="submit" class="btn btn-full">Login</button>
+    </form>
+    <p class="hint">League Code: <code>{{ league.league_code }}</code></p>
+  </div>
+</div>
+{% endblock %}

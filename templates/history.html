@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}History — {{ league.name }}{% endblock %}
+
+{% block content %}
+<div class="league-header">
+  <h1>📜 Recap History</h1>
+  <p class="tagline">{{ league.name }}</p>
+  <div class="league-actions">
+    <a href="{{ url_for('league_public', league_code=league.league_code) }}" class="btn">← Back</a>
+  </div>
+</div>
+
+<div class="card">
+  {% if recaps %}
+    <ul class="recap-list">
+      {% for r in recaps %}
+        <li>
+          <div class="recap-meta">
+            <span class="week-badge">Week {{ r.week }}</span>
+            <span class="recap-date">{{ r.created_at }}</span>
+            {% if r.team_name %}
+              <span class="recap-author">by {{ r.team_name }}</span>
+            {% endif %}
+          </div>
+          <a href="{{ url_for('league_recap', league_code=league.league_code, recap_id=r.id) }}" class="recap-title">View Recap</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty">No recaps yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
