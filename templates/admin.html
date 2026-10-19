@@ -112,6 +112,20 @@
   </div>
 </div>
 
+{% if backups %}
+<div class="card">
+  <h2>💾 Recent Backups</h2>
+  <ul class="league-list">
+    {% for b in backups %}
+      <li>
+        <span class="mono">{{ b.name }}</span>
+        <a href="{{ url_for('download_backup', filename=b.name) }}" class="btn-small">Download</a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 {% if webhooks %}
 <div class="card">
   <h2>🔗 Configured Webhooks</h2>

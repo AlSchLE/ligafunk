@@ -21,6 +21,43 @@ import logging
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("sleeper-web")
 
+# Auto-backup directory
+BACKUP_DIR = Path(__file__).resolve().parent / "backups"
+BACKUP_DIR.mkdir(exist_ok=True)
+MAX_BACKUPS = 10  # Keep only last 10 backups
+
+
+def _auto_backup():
+    """Create a JSON backup of all data."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = BACKUP_DIR / f"sleeper_backup_{timestamp}.json"
+
+    conn = get_db()
+    leagues = conn.execute("SELECT * FROM leagues").fetchall()
+    teams = conn.execute("SELECT * FROM teams").fetchall()
+    recaps = conn.execute("SELECT * FROM recaps").fetchall()
+    webhooks = conn.execute("SELECT * FROM webhooks").fetchall()
+    conn.close()
+
+    data = {
+        "leagues": [dict(l) for l in leagues],
+        "teams": [dict(t) for t in teams],
+        "recaps": [dict(r) for r in recaps],
+        "webhooks": [dict(w) for w in webhooks],
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    with open(backup_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, default=str)
+
+    # Cleanup old backups
+    backups = sorted(BACKUP_DIR.glob("sleeper_backup_*.json"))
+    while len(backups) > MAX_BACKUPS:
+        backups[0].unlink()
+        backups = backups[1:]
+
+    log.info("Auto-backup created: %s", backup_file.name)
+
 from config import DATABASE_PATH, SECRET_KEY, SESSION_LIFETIME_HOURS
 from database import (get_db, init_db, hash_password, verify_password,
                       generate_league_code, create_session,
@@ -145,6 +182,16 @@ def import_backup():
     return redirect(url_for("admin"))
 
 
+@app.route("/admin/download-backup/<filename>")
+def download_backup(filename):
+    """Download a backup file."""
+    from flask import safe_join
+    safe_path = safe_join(str(BACKUP_DIR), filename)
+    if not safe_path or not os.path.isfile(safe_path):
+        abort(404)
+    return send_file(safe_path, as_attachment=True)
+
+
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
     if request.method == "POST":
@@ -164,6 +211,7 @@ def admin():
             )
             conn.commit()
             conn.close()
+            _auto_backup()
             flash(f"League '{name}' created with code {code}")
             return redirect(url_for("admin"))
 
@@ -183,6 +231,7 @@ def admin():
             )
             conn.commit()
             conn.close()
+            _auto_backup()
             flash(f"Team '{name}' added")
             return redirect(url_for("admin"))
 
@@ -209,8 +258,9 @@ def admin():
         SELECT w.*, l.name as league_name FROM webhooks w
         JOIN leagues l ON w.league_id = l.id
     """).fetchall()
+    backups = sorted(BACKUP_DIR.glob("sleeper_backup_*.json"), reverse=True)[:10]
     conn.close()
-    return render_template("admin.html", leagues=leagues, webhooks=webhooks)
+    return render_template("admin.html", leagues=leagues, webhooks=webhooks, backups=backups)
 
 
 # ============================================================
@@ -344,6 +394,7 @@ def recap_new(league_code):
         )
         conn.commit()
         conn.close()
+        _auto_backup()
         flash("Recap saved.")
         return redirect(url_for("team_dashboard", league_code=league_code))
 
