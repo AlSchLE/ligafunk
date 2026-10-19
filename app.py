@@ -16,6 +16,10 @@ from pathlib import Path
 from flask import (Flask, render_template, request, redirect,
                    url_for, flash, abort, jsonify, send_file,
                    make_response, session as flask_session)
+import logging
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("sleeper-web")
 
 from config import DATABASE_PATH, SECRET_KEY, SESSION_LIFETIME_HOURS
 from database import (get_db, init_db, hash_password, verify_password,
@@ -55,6 +59,90 @@ def inject_team():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/admin/backup")
+def backup():
+    """Export all data as JSON."""
+    conn = get_db()
+    leagues = conn.execute("SELECT * FROM leagues").fetchall()
+    teams = conn.execute("SELECT * FROM teams").fetchall()
+    recaps = conn.execute("SELECT * FROM recaps").fetchall()
+    webhooks = conn.execute("SELECT * FROM webhooks").fetchall()
+    conn.close()
+
+    data = {
+        "leagues": [dict(l) for l in leagues],
+        "teams": [dict(t) for t in teams],
+        "recaps": [dict(r) for r in recaps],
+        "webhooks": [dict(w) for w in webhooks],
+    }
+    return jsonify(data)
+
+
+@app.route("/admin/import", methods=["POST"])
+def import_backup():
+    """Import data from JSON backup."""
+    if "backup_file" not in request.files:
+        flash("No file uploaded.")
+        return redirect(url_for("admin"))
+    file = request.files["backup_file"]
+    if not file.filename.endswith(".json"):
+        flash("Please upload a .json file.")
+        return redirect(url_for("admin"))
+    try:
+        data = json.loads(file.read().decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        flash("Invalid JSON file.")
+        return redirect(url_for("admin"))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Import leagues
+    for l in data.get("leagues", []):
+        try:
+            cursor.execute(
+                "INSERT OR IGNORE INTO leagues (id, name, sleeper_league_id, league_code) VALUES (?, ?, ?, ?)",
+                (l["id"], l["name"], l["sleeper_league_id"], l["league_code"])
+            )
+        except Exception as e:
+            log.warning("Import league failed: %s", e)
+
+    # Import teams
+    for t in data.get("teams", []):
+        try:
+            cursor.execute(
+                "INSERT OR IGNORE INTO teams (id, league_id, name, owner_name, sleeper_roster_id, password_hash) VALUES (?, ?, ?, ?, ?, ?)",
+                (t["id"], t["league_id"], t["name"], t["owner_name"], t.get("sleeper_roster_id"), t["password_hash"])
+            )
+        except Exception as e:
+            log.warning("Import team failed: %s", e)
+
+    # Import recaps
+    for r in data.get("recaps", []):
+        try:
+            cursor.execute(
+                "INSERT OR IGNORE INTO recaps (id, league_id, week, content, created_by) VALUES (?, ?, ?, ?, ?)",
+                (r["id"], r["league_id"], r["week"], r["content"], r.get("created_by"))
+            )
+        except Exception as e:
+            log.warning("Import recap failed: %s", e)
+
+    # Import webhooks
+    for w in data.get("webhooks", []):
+        try:
+            cursor.execute(
+                "INSERT OR IGNORE INTO webhooks (id, league_id, webhook_type, webhook_url) VALUES (?, ?, ?, ?)",
+                (w["id"], w["league_id"], w["webhook_type"], w["webhook_url"])
+            )
+        except Exception as e:
+            log.warning("Import webhook failed: %s", e)
+
+    conn.commit()
+    conn.close()
+    flash("Backup imported successfully.")
+    return redirect(url_for("admin"))
 
 
 @app.route("/admin", methods=["GET", "POST"])
