@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Start/Sit — {{ team.name }}{% endblock %}
+
+{% block content %}
+<div class="league-header">
+  <h1>🏈 Start/Sit Advisor</h1>
+  <p class="tagline">{{ team.name }} — {{ league.name }} — Week {{ week }}</p>
+  <div class="league-actions">
+    <a href="{{ url_for('team_dashboard', league_code=league.league_code) }}" class="btn">← Back to Dashboard</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="recap-content">{{ content }}</div>
+</div>
+
+<div class="share-section">
+  <h2>📤 Share</h2>
+  <div class="share-buttons">
+    <a href="https://wa.me/?text={{ content[:500] | urlencode }}" target="_blank" class="btn-share whatsapp">📱 WhatsApp</a>
+    <button onclick="copyToClipboard('{{ content | escape }}', this)" class="btn-share signal">📋 Copy</button>
+    <a href="mailto:?subject={{ league.name }} — Start/Sit Week {{ week }}&body={{ content | urlencode }}" class="btn-share email">📧 E-Mail</a>
+  </div>
+</div>
+{% endblock %}

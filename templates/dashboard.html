@@ -9,24 +9,40 @@
 
 <div class="grid-4">
   <div class="card dashboard-card">
-    <h2>📋 My Recaps</h2>
-    <p>Create and manage your team's recaps.</p>
+    <h2>📋 New Recap</h2>
+    <p>Create a manual recap or generate one automatically.</p>
     <a href="{{ url_for('recap_new', league_code=league.league_code) }}" class="btn">+ New Recap</a>
   </div>
   <div class="card dashboard-card">
-    <h2>📜 League History</h2>
-    <p>View all recaps from your league.</p>
-    <a href="{{ url_for('league_history', league_code=league.league_code) }}" class="btn">View History</a>
+    <h2>🏈 Start/Sit</h2>
+    <p>Get start/sit advice for your team.</p>
+    <form method="post" action="{{ url_for('startsit_advice', league_code=league.league_code) }}">
+      <input type="number" name="week" placeholder="Week" min="1" max="25" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      <button type="submit" class="btn" style="width:100%;">Get Advice</button>
+    </form>
   </div>
   <div class="card dashboard-card">
-    <h2>📤 Share</h2>
-    <p>Share recaps via WhatsApp, Signal, or webhook.</p>
-    <a href="{{ url_for('league_public', league_code=league.league_code) }}" class="btn">Share</a>
+    <h2>📋 Waivers</h2>
+    <p>Get waiver wire advice for your team.</p>
+    <form method="post" action="{{ url_for('waiver_advice', league_code=league.league_code) }}">
+      <input type="number" name="week" placeholder="Week" min="1" max="25" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      <button type="submit" class="btn" style="width:100%;">Get Waivers</button>
+    </form>
   </div>
   <div class="card dashboard-card">
     <h2>📡 RSS Feed</h2>
     <p>Subscribe to your league's RSS feed.</p>
     <a href="{{ url_for('league_rss', league_code=league.league_code) }}" class="btn">RSS</a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>⚡ Quick Actions</h2>
+  <div class="share-buttons">
+    <form method="post" action="{{ url_for('recap_generate', league_code=league.league_code) }}" style="display:inline">
+      <input type="number" name="week" placeholder="Week" min="1" max="25" style="width:80px;display:inline-block;margin-right:0.5rem;padding:0.5rem;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      <button type="submit" class="btn">🏆 Auto-Generate Recap</button>
+    </form>
   </div>
 </div>
 
