@@ -16,6 +16,8 @@ from pathlib import Path
 from flask import (Flask, render_template, request, redirect,
                    url_for, flash, abort, jsonify, send_file,
                    make_response, session as flask_session)
+import subprocess
+import tempfile
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -516,6 +518,88 @@ def league_rss(league_code):
     response = make_response(rss)
     response.headers["Content-Type"] = "application/rss+xml"
     return response
+
+
+# ============================================================
+# Recap & Start/Sit generation
+# ============================================================
+
+@app.route("/l/<league_code>/recap/generate", methods=["POST"])
+@login_required
+def recap_generate(league_code):
+    """Auto-generate recap for a given week."""
+    team = get_session_team(flask_session.get("session_id", ""))
+    conn = get_db()
+    league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
+    if not league:
+        abort(404)
+    conn.close()
+
+    week = int(request.form.get("week", 0))
+
+    try:
+        from sleeper_recap import generate_recap
+        content = generate_recap(league["sleeper_league_id"], week=week)
+    except Exception as e:
+        flash(f"Recap generation failed: {str(e)}")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO recaps (league_id, week, content, created_by) VALUES (?, ?, ?, ?)",
+        (league["id"], week, content, team["id"])
+    )
+    conn.commit()
+    conn.close()
+    _auto_backup()
+    flash("Recap generated successfully.")
+    return redirect(url_for("team_dashboard", league_code=league_code))
+
+
+@app.route("/l/<league_code>/startsit", methods=["POST"])
+@login_required
+def startsit_advice(league_code):
+    """Generate start/sit advice for the team."""
+    team = get_session_team(flask_session.get("session_id", ""))
+    conn = get_db()
+    league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
+    if not league:
+        abort(404)
+    conn.close()
+
+    week = int(request.form.get("week", 0))
+
+    try:
+        from sleeper_recap import generate_startsit
+        content = generate_startsit(league["sleeper_league_id"], week=week)
+    except Exception as e:
+        flash(f"Start/Sit generation failed: {str(e)}")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    return render_template("startsit.html", team=team, league=league, content=content, week=week)
+
+
+@app.route("/l/<league_code>/waivers", methods=["POST"])
+@login_required
+def waiver_advice(league_code):
+    """Generate waiver advice for the team."""
+    team = get_session_team(flask_session.get("session_id", ""))
+    conn = get_db()
+    league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
+    if not league:
+        abort(404)
+    conn.close()
+
+    week = int(request.form.get("week", 0))
+
+    try:
+        from sleeper_recap import generate_waivers
+        content = generate_waivers(league["sleeper_league_id"], week=week)
+    except Exception as e:
+        flash(f"Waiver generation failed: {str(e)}")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    return render_template("waivers.html", team=team, league=league, content=content, week=week)
 
 
 # ============================================================
