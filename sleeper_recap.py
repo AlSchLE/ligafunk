@@ -1,7 +1,7 @@
 """
 Sleeper Web — Recap & Start/Sit generation via Sleeper API.
 
-Reuses the Sleeper_Tools recapcore package for:
+Uses the local recapcore module for:
 - Automatic recap generation (league_recap)
 - Start/Sit advisor (evaluate_roster)
 - Waiver assistant (render_waivers)
@@ -13,10 +13,10 @@ import os
 from pathlib import Path
 from typing import Any
 
-# Add Sleeper_Tools to path
-SLEEPER_TOOLS_PATH = Path(__file__).resolve().parent.parent.parent / "Sleeper_Tools" / "Recap_Generator"
-if str(SLEEPER_TOOLS_PATH) not in sys.path:
-    sys.path.insert(0, str(SLEEPER_TOOLS_PATH))
+# Add local path for recapcore imports
+_local_path = str(Path(__file__).resolve().parent)
+if _local_path not in sys.path:
+    sys.path.insert(0, _local_path)
 
 from recapcore.client import SleeperClient
 from recapcore.config import LEAGUES, MY_TEAMS
