@@ -8,31 +8,37 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-from config import DATABASE_PATH, SESSION_LIFETIME_HOURS
+import config
 
 
-def _ensure_db_dir():
-    """Ensure the database directory exists."""
-    db_path = Path(DATABASE_PATH)
+def _get_db_path() -> str:
+    """Get the current database path, ensuring the directory exists."""
+    path = config.DATABASE_PATH
+    p = Path(path)
     try:
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        # Test write permission
+        test_file = p.parent / ".write_test"
+        test_file.touch()
+        test_file.unlink()
+        return path
     except OSError:
-        # Fallback to /tmp if primary path fails
-        global DATABASE_PATH
-        DATABASE_PATH = os.path.join(tempfile.gettempdir(), "sleeper_web.db")
+        # Fallback to /tmp if primary path is not writable
+        fallback = os.path.join(tempfile.gettempdir(), "sleeper_web.db")
+        config.DATABASE_PATH = fallback
+        return fallback
 
 
 def get_db() -> sqlite3.Connection:
     """Get a database connection with row factory."""
-    _ensure_db_dir()
-    conn = sqlite3.connect(DATABASE_PATH)
+    db_path = _get_db_path()
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
     """Initialize the database with all tables."""
-    _ensure_db_dir()
     conn = get_db()
     cursor = conn.cursor()
 
@@ -119,7 +125,7 @@ def generate_league_code() -> str:
 def create_session(team_id: int) -> str:
     """Create a new session for a team."""
     session_id = secrets.token_urlsafe(32)
-    expires_at = datetime.now() + timedelta(hours=SESSION_LIFETIME_HOURS)
+    expires_at = datetime.now() + timedelta(hours=config.SESSION_LIFETIME_HOURS)
 
     conn = get_db()
     cursor = conn.cursor()
