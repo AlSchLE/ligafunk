@@ -2,8 +2,9 @@
 
 {% block content %}
 <div class="hero">
-  <h1>🏈 Sleeper Web</h1>
-  <p class="tagline">League Recap & Team Management Platform</p>
+  <h1 id="sport-icon">🏈</h1>
+  <h2 id="sport-name" style="font-size: 2rem; color: var(--accent); margin-bottom: 0.5rem;">Fantasy League</h2>
+  <p class="tagline" id="sport-tagline">Recap & Team Management Platform</p>
 </div>
 
 <div class="card-grid">
@@ -21,4 +22,41 @@
     <p>Share recaps via WhatsApp, Signal, Slack, Discord, Telegram, E-Mail, or RSS.</p>
   </div>
 </div>
+
+<div class="card">
+  <h2>⚡ Quick Start</h2>
+  <p>Enter your Sleeper League ID to see the correct branding:</p>
+  <div class="form-group">
+    <input type="text" id="league-id-input" placeholder="e.g. 1387730345675210752" class="form-input">
+    <button onclick="updateBranding()" class="btn">Update Branding</button>
+  </div>
+</div>
+
+<script>
+const SPORT_BRANDS = {
+    soccer: { name: "Soccer", icon: "⚽", primary: "#006400", accent: "#ffffff", tagline: "Fantasy Soccer League" },
+    football: { name: "Football", icon: "🏈", primary: "#1a472a", accent: "#c9a227", tagline: "Fantasy Football League" },
+    baseball: { name: "Baseball", icon: "⚾", primary: "#003087", accent: "#ff0000", tagline: "Fantasy Baseball League" },
+    basketball: { name: "Basketball", icon: "🏀", primary: "#ff6600", accent: "#000000", tagline: "Fantasy Basketball League" },
+    hockey: { name: "Hockey", icon: "🏒", primary: "#000080", accent: "#ff0000", tagline: "Fantasy Hockey League" }
+};
+
+const LEAGUE_MAP = {
+    "1389332038909198336": "soccer",
+    "1387730345675210752": "football"
+};
+
+function updateBranding() {
+    const leagueId = document.getElementById('league-id-input').value.trim();
+    const sportKey = LEAGUE_MAP[leagueId] || 'football';
+    const brand = SPORT_BRANDS[sportKey];
+
+    document.getElementById('sport-icon').textContent = brand.icon;
+    document.getElementById('sport-name').textContent = brand.name;
+    document.getElementById('sport-tagline').textContent = brand.tagline;
+
+    document.documentElement.style.setProperty('--primary', brand.primary);
+    document.documentElement.style.setProperty('--accent', brand.accent);
+}
+</script>
 {% endblock %}

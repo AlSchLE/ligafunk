@@ -82,9 +82,26 @@ a:hover { text-decoration: underline; }
 }
 
 .hero h1 {
-  font-size: 3rem;
+  font-size: 4rem;
+  margin-bottom: 0.5rem;
+}
+
+.hero h2 {
+  font-size: 2rem;
   color: var(--accent);
   margin-bottom: 0.5rem;
+}
+
+/* Form Input */
+.form-input {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
 }
 
 .tagline {
