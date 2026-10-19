@@ -62,7 +62,6 @@ def generate_recap(league_id: str, week: int | None = None) -> str:
 
     if block is None:
         # Try direct lookup
-        from recapcore.client import SleeperClient
         with SleeperClient() as client:
             league_data = client.league(league_id)
             users = client.users(league_id)
