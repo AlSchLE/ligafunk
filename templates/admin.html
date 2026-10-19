@@ -4,6 +4,18 @@
 {% block content %}
 <h1>⚙️ Admin Panel</h1>
 
+<div class="card" style="border-left: 4px solid var(--warning);">
+  <h2>💾 Backup & Restore</h2>
+  <p>Download a JSON backup of all leagues, teams, recaps and webhooks. Restore after a Render redeploy.</p>
+  <div class="share-buttons">
+    <a href="{{ url_for('backup') }}" class="btn" download>📥 Download Backup</a>
+    <form method="post" action="{{ url_for('import_backup') }}" enctype="multipart/form-data" style="display:inline">
+      <input type="file" name="backup_file" accept=".json" required style="display:none" id="backup-file-input" onchange="this.form.submit()">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('backup-file-input').click()">📤 Import Backup</button>
+    </form>
+  </div>
+</div>
+
 <div class="grid-2">
   <div class="card">
     <h2>➕ Add League</h2>
