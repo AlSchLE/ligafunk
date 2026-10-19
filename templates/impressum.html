@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Impressum — Sleeper Web{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+  <h1>Impressum</h1>
+
+  <h2>Angaben gemäß § 5 TMG</h2>
+  <p>
+    Alexander Schrader<br>
+    NTS Netzwerk Telekom Service AG<br>
+    [Straße, PLZ Ort]
+  </p>
+
+  <h2>Kontakt</h2>
+  <p>
+    E-Mail: [E-Mail-Adresse]
+  </p>
+
+  <h2>Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
+  <p>
+    Alexander Schrader<br>
+    [Anschrift wie oben]
+  </p>
+
+  <h2>Urheberrecht</h2>
+  <p>
+    Die Inhalte dieser Website werden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Alle Inhalte sind urheberrechtlich geschützt.
+  </p>
+
+  <h2>Datenschutz</h2>
+  <p>
+    Diese Website verwendet keine Cookies und sammelt keine personenbezogenen Daten. Es werden keine Tracking-Tools eingesetzt. Passwörter werden nur als Salted Hash gespeichert und nie im Klartext.
+  </p>
+
+  <h2>Haftung für Links</h2>
+  <p>
+    Diese Website enthält Links zu externen Websites (z.B. Sleeper, WhatsApp, Signal, Slack, Discord, Telegram), auf deren Inhalt wir keinen Einfluss haben. Für den Inhalt der verlinkten Seiten sind stets deren Betreiber verantwortlich.
+  </p>
+
+  <h2>Streitschlichtung</h2>
+  <p>
+    Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr. Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
+  </p>
+
+  <p style="margin-top: 2rem; color: var(--text-muted); font-size: 0.85rem;">
+    Stand: Oktober 2026
+  </p>
+
+  <a href="{{ url_for('index') }}" class="btn" style="margin-top: 1rem;">← Zurück zur Startseite</a>
+</div>
+{% endblock %}
