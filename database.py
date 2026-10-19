@@ -1,7 +1,9 @@
 """Database models and utilities for Sleeper Web."""
+import os
 import sqlite3
 import hashlib
 import secrets
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -9,8 +11,20 @@ from typing import Optional
 from config import DATABASE_PATH, SESSION_LIFETIME_HOURS
 
 
+def _ensure_db_dir():
+    """Ensure the database directory exists."""
+    db_path = Path(DATABASE_PATH)
+    try:
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        # Fallback to /tmp if primary path fails
+        global DATABASE_PATH
+        DATABASE_PATH = os.path.join(tempfile.gettempdir(), "sleeper_web.db")
+
+
 def get_db() -> sqlite3.Connection:
     """Get a database connection with row factory."""
+    _ensure_db_dir()
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -18,10 +32,10 @@ def get_db() -> sqlite3.Connection:
 
 def init_db():
     """Initialize the database with all tables."""
+    _ensure_db_dir()
     conn = get_db()
     cursor = conn.cursor()
 
-    # Leagues table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS leagues (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,7 +46,6 @@ def init_db():
         )
     """)
 
-    # Teams table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS teams (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,7 +59,6 @@ def init_db():
         )
     """)
 
-    # Recaps table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS recaps (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,7 +72,6 @@ def init_db():
         )
     """)
 
-    # Sessions table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
             id TEXT PRIMARY KEY,
@@ -71,7 +82,6 @@ def init_db():
         )
     """)
 
-    # Webhooks table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS webhooks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,7 +137,7 @@ def get_session_team(session_id: str) -> Optional[dict]:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT t.*, l.name as league_name, l.sleeper_league_id
+        SELECT t.*, l.name as league_name, l.sleeper_league_id, l.league_code
         FROM sessions s
         JOIN teams t ON s.team_id = t.id
         JOIN leagues l ON t.league_id = l.id
