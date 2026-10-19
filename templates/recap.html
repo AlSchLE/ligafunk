@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Week {{ recap.week }} Recap — {{ league.name }}{% endblock %}
+
+{% block content %}
+<div class="recap-header">
+  <h1>📋 Week {{ recap.week }} Recap</h1>
+  <p class="tagline">{{ league.name }}</p>
+  <div class="recap-meta">
+    <span class="week-badge">Week {{ recap.week }}</span>
+    <span class="recap-date">{{ recap.created_at }}</span>
+    {% if recap.team_name %}
+      <span class="recap-author">by {{ recap.team_name }}</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="recap-content">{{ recap.content }}</div>
+</div>
+
+<div class="share-section">
+  <h2>📤 Share this Recap</h2>
+  <div class="share-buttons">
+    <a href="{{ url_for('share_recap', league_code=league.league_code, recap_id=recap.id) }}" class="btn-share whatsapp">📱 WhatsApp</a>
+    <button onclick="copyToClipboard('{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id, _external=True) }}', this)" class="btn-share signal">📋 Copy Link</button>
+    <button onclick="copyToClipboard('{{ recap.content[:500] }}...', this)" class="btn-share signal">📋 Copy Text</button>
+    {% for hook in webhooks %}
+      <button onclick="postWebhook({{ recap.id }}, '{{ hook.webhook_type }}', this)" class="btn-share webhook">🚀 Post to {{ hook.webhook_type }}</button>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <a href="{{ url_for('league_public', league_code=league.league_code) }}" class="btn">← Back to League</a>
+</div>
+
+<script>
+function postWebhook(recapId, type, btn) {
+  btn.textContent = "Posting...";
+  fetch(`/l/{{ league.league_code }}/webhook/${recapId}`, {method: 'POST'})
+    .then(r => r.json())
+    .then(data => {
+      const ok = data.results.every(r => r.status === 200);
+      btn.textContent = ok ? "✓ Posted!" : "⚠ Partial";
+      setTimeout(() => { btn.textContent = "🚀 Post to " + type; }, 3000);
+    })
+    .catch(() => {
+      btn.textContent = "✗ Failed";
+      setTimeout(() => { btn.textContent = "🚀 Post to " + type; }, 3000);
+    });
+}
+</script>
+{% endblock %}

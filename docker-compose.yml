@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  sleeper-web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - DATABASE_PATH=/data/sleeper_web.db
+    volumes:
+      - sleeper-data:/data
+    restart: unless-stopped
+
+volumes:
+  sleeper-data:

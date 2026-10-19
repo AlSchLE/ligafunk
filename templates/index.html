@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+  <h1>🏈 Sleeper Web</h1>
+  <p class="tagline">League Recap & Team Management Platform</p>
+</div>
+
+<div class="card-grid">
+  <div class="card">
+    <h2>📋 League Page</h2>
+    <p>Each league gets its own unguessable URL with recaps and history. No login needed to view.</p>
+    <a href="{{ url_for('admin') }}" class="btn">Manage Leagues</a>
+  </div>
+  <div class="card">
+    <h2>🔐 Team Login</h2>
+    <p>Team owners log in with league code + team password for private waiver, trade, and lineup tools.</p>
+  </div>
+  <div class="card">
+    <h2>📤 Share Anywhere</h2>
+    <p>Share recaps via WhatsApp, Signal, Slack, Discord, Telegram, E-Mail, or RSS.</p>
+  </div>
+</div>
+{% endblock %}

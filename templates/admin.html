@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Admin — Sleeper Web{% endblock %}
+
+{% block content %}
+<h1>⚙️ Admin Panel</h1>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>➕ Add League</h2>
+    <form method="post">
+      <input type="hidden" name="action" value="add_league">
+      <div class="form-group">
+        <label>League Name</label>
+        <input type="text" name="name" required placeholder="e.g. NTS NFL Fantasy League 26/27">
+      </div>
+      <div class="form-group">
+        <label>Sleeper League ID</label>
+        <input type="text" name="sleeper_league_id" required placeholder="e.g. 1387730345675210752">
+      </div>
+      <button type="submit" class="btn">Create League</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>👥 Add Team</h2>
+    <form method="post">
+      <input type="hidden" name="action" value="add_team">
+      <div class="form-group">
+        <label>League</label>
+        <select name="league_id" required>
+          {% for l in leagues %}
+            <option value="{{ l.id }}">{{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Team Name</label>
+        <input type="text" name="name" required placeholder="e.g. LE Shitheads">
+      </div>
+      <div class="form-group">
+        <label>Owner Name</label>
+        <input type="text" name="owner_name" required placeholder="e.g. John">
+      </div>
+      <div class="form-group">
+        <label>Sleeper Roster ID (optional)</label>
+        <input type="text" name="sleeper_roster_id" placeholder="e.g. 1">
+      </div>
+      <div class="form-group">
+        <label>Team Password</label>
+        <input type="password" name="password" required placeholder="Team password">
+      </div>
+      <button type="submit" class="btn">Add Team</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>🔗 Add Webhook</h2>
+    <form method="post">
+      <input type="hidden" name="action" value="add_webhook">
+      <div class="form-group">
+        <label>League</label>
+        <select name="league_id" required>
+          {% for l in leagues %}
+            <option value="{{ l.id }}">{{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Webhook Type</label>
+        <select name="webhook_type" required>
+          <option value="slack">Slack</option>
+          <option value="discord">Discord</option>
+          <option value="telegram">Telegram</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Webhook URL / Telegram Bot Token</label>
+        <input type="text" name="webhook_url" required placeholder="https://hooks.slack.com/...">
+      </div>
+      <button type="submit" class="btn">Add Webhook</button>
+    </form>
+    <p class="hint">For Telegram: use format <code>bot_token/chat_id</code></p>
+  </div>
+
+  <div class="card">
+    <h2>📋 Leagues</h2>
+    {% if leagues %}
+      <ul class="league-list">
+        {% for l in leagues %}
+          <li>
+            <strong>{{ l.name }}</strong>
+            <span class="mono">{{ l.league_code }}</span>
+            <a href="{{ url_for('league_public', league_code=l.league_code) }}" class="btn-small">View</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">No leagues yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if webhooks %}
+<div class="card">
+  <h2>🔗 Configured Webhooks</h2>
+  <ul class="webhook-list">
+    {% for w in webhooks %}
+      <li>
+        <span class="badge badge-{{ w.webhook_type }}">{{ w.webhook_type }}</span>
+        <strong>{{ w.league_name }}</strong>
+        <code>{{ w.webhook_url[:60] }}...</code>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

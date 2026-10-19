@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}New Recap — {{ team.name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>📋 New Recap</h1>
+  <p class="tagline">{{ team.name }} — {{ league.name }}</p>
+  <form method="post">
+    <div class="form-group">
+      <label>Week</label>
+      <input type="number" name="week" required min="1" max="25" placeholder="e.g. 5">
+    </div>
+    <div class="form-group">
+      <label>Recap Content</label>
+      <textarea name="content" rows="15" required placeholder="Paste your recap here..."></textarea>
+    </div>
+    <button type="submit" class="btn">Save Recap</button>
+    <a href="{{ url_for('team_dashboard', league_code=league.league_code) }}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}
