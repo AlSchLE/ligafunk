@@ -16,17 +16,52 @@ from pathlib import Path
 from flask import (Flask, render_template, request, redirect,
                    url_for, flash, abort, jsonify, send_file,
                    make_response, session as flask_session)
-import subprocess
-import tempfile
+from flask_talisman import Talisman
 import logging
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("sleeper-web")
 
+# Security headers via Talisman
+csp = {
+    'default-src': "'self'",
+    'img-src': "'self' data:",
+    'style-src': "'self' 'unsafe-inline'",
+    'script-src': "'self' 'unsafe-inline'",
+}
+
+app = Flask(__name__)
+Talisman(
+    app,
+    content_security_policy=csp,
+    force_https=True,
+    strict_transport_security=True,
+    strict_transport_security_max_age=31536000,
+    session_cookie_secure=True,
+    session_cookie_http_only=True,
+    session_cookie_samesite='Lax',
+)
+
+from config import DATABASE_PATH, SECRET_KEY, SESSION_LIFETIME_HOURS
+from database import (get_db, init_db, hash_password, verify_password,
+                      generate_league_code, create_session,
+                      get_session_team, delete_session)
+
+app.secret_key = SECRET_KEY
+app.config["SESSION_LIFETIME"] = timedelta(hours=SESSION_LIFETIME_HOURS)
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["PERMANENT_SESSION_LIFETIME"] = 3600  # 1 hour
+
+# Admin password (in production, use environment variable)
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "nm83n4838334!&%-sdgawhwdsDCXVXY")
+ADMIN_PASSWORD_HASH = hashlib.sha256(ADMIN_PASSWORD.encode()).hexdigest()
+
 # Auto-backup directory
 BACKUP_DIR = Path(__file__).resolve().parent / "backups"
 BACKUP_DIR.mkdir(exist_ok=True)
-MAX_BACKUPS = 10  # Keep only last 10 backups
+MAX_BACKUPS = 10
 
 
 def _auto_backup():
@@ -60,19 +95,34 @@ def _auto_backup():
 
     log.info("Auto-backup created: %s", backup_file.name)
 
-from config import DATABASE_PATH, SECRET_KEY, SESSION_LIFETIME_HOURS
-from database import (get_db, init_db, hash_password, verify_password,
-                      generate_league_code, create_session,
-                      get_session_team, delete_session)
 
-app = Flask(__name__)
-app.secret_key = SECRET_KEY
-app.config["SESSION_LIFETIME"] = timedelta(hours=SESSION_LIFETIME_HOURS)
+def _csrf_token():
+    """Get or create a CSRF token for the session."""
+    if "_csrf_token" not in flask_session:
+        flask_session["_csrf_token"] = secrets.token_hex(32)
+    return flask_session["_csrf_token"]
 
 
-# ============================================================
-# Authentication
-# ============================================================
+def _validate_csrf():
+    """Validate CSRF token from request."""
+    token = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token")
+    if not token or not secrets.compare_digest(token, flask_session.get("_csrf_token", "")):
+        abort(403)
+
+
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": _csrf_token()}
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not flask_session.get("admin_authenticated"):
+            return redirect(url_for("admin_login", next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 def login_required(f):
     @wraps(f)
@@ -85,14 +135,8 @@ def login_required(f):
     return decorated_function
 
 
-@app.context_processor
-def inject_team():
-    team = get_session_team(flask_session.get("session_id", ""))
-    return {"current_team": team}
-
-
 # ============================================================
-# Home / Admin
+# Home / Admin Auth
 # ============================================================
 
 @app.route("/")
@@ -105,101 +149,32 @@ def impressum():
     return render_template("impressum.html")
 
 
-@app.route("/admin/backup")
-def backup():
-    """Export all data as JSON."""
-    conn = get_db()
-    leagues = conn.execute("SELECT * FROM leagues").fetchall()
-    teams = conn.execute("SELECT * FROM teams").fetchall()
-    recaps = conn.execute("SELECT * FROM recaps").fetchall()
-    webhooks = conn.execute("SELECT * FROM webhooks").fetchall()
-    conn.close()
-
-    data = {
-        "leagues": [dict(l) for l in leagues],
-        "teams": [dict(t) for t in teams],
-        "recaps": [dict(r) for r in recaps],
-        "webhooks": [dict(w) for w in webhooks],
-    }
-    return jsonify(data)
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    next_url = request.args.get("next") or url_for("admin")
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if hashlib.sha256(password.encode()).hexdigest() == ADMIN_PASSWORD_HASH:
+            flask_session["admin_authenticated"] = True
+            flask_session.permanent = True
+            return redirect(next_url)
+        flash("Invalid password.")
+    return render_template("admin_login.html", next=next_url)
 
 
-@app.route("/admin/import", methods=["POST"])
-def import_backup():
-    """Import data from JSON backup."""
-    if "backup_file" not in request.files:
-        flash("No file uploaded.")
-        return redirect(url_for("admin"))
-    file = request.files["backup_file"]
-    if not file.filename.endswith(".json"):
-        flash("Please upload a .json file.")
-        return redirect(url_for("admin"))
-    try:
-        data = json.loads(file.read().decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        flash("Invalid JSON file.")
-        return redirect(url_for("admin"))
-
-    conn = get_db()
-    cursor = conn.cursor()
-
-    # Import leagues
-    for l in data.get("leagues", []):
-        try:
-            cursor.execute(
-                "INSERT OR IGNORE INTO leagues (id, name, sleeper_league_id, league_code) VALUES (?, ?, ?, ?)",
-                (l["id"], l["name"], l["sleeper_league_id"], l["league_code"])
-            )
-        except Exception as e:
-            log.warning("Import league failed: %s", e)
-
-    # Import teams
-    for t in data.get("teams", []):
-        try:
-            cursor.execute(
-                "INSERT OR IGNORE INTO teams (id, league_id, name, owner_name, sleeper_roster_id, password_hash) VALUES (?, ?, ?, ?, ?, ?)",
-                (t["id"], t["league_id"], t["name"], t["owner_name"], t.get("sleeper_roster_id"), t["password_hash"])
-            )
-        except Exception as e:
-            log.warning("Import team failed: %s", e)
-
-    # Import recaps
-    for r in data.get("recaps", []):
-        try:
-            cursor.execute(
-                "INSERT OR IGNORE INTO recaps (id, league_id, week, content, created_by) VALUES (?, ?, ?, ?, ?)",
-                (r["id"], r["league_id"], r["week"], r["content"], r.get("created_by"))
-            )
-        except Exception as e:
-            log.warning("Import recap failed: %s", e)
-
-    # Import webhooks
-    for w in data.get("webhooks", []):
-        try:
-            cursor.execute(
-                "INSERT OR IGNORE INTO webhooks (id, league_id, webhook_type, webhook_url) VALUES (?, ?, ?, ?)",
-                (w["id"], w["league_id"], w["webhook_type"], w["webhook_url"])
-            )
-        except Exception as e:
-            log.warning("Import webhook failed: %s", e)
-
-    conn.commit()
-    conn.close()
-    flash("Backup imported successfully.")
-    return redirect(url_for("admin"))
+@app.route("/admin/logout")
+def admin_logout():
+    flask_session.pop("admin_authenticated", None)
+    flash("Logged out.")
+    return redirect(url_for("index"))
 
 
-@app.route("/admin/download-backup/<filename>")
-def download_backup(filename):
-    """Download a backup file."""
-    from flask import safe_join
-    safe_path = safe_join(str(BACKUP_DIR), filename)
-    if not safe_path or not os.path.isfile(safe_path):
-        abort(404)
-    return send_file(safe_path, as_attachment=True)
-
+# ============================================================
+# Admin (protected)
+# ============================================================
 
 @app.route("/admin", methods=["GET", "POST"])
+@admin_required
 def admin():
     if request.method == "POST":
         action = request.form.get("action")
@@ -389,6 +364,7 @@ def recap_new(league_code):
         abort(404)
 
     if request.method == "POST":
+        _validate_csrf()
         week = int(request.form.get("week", 0))
         content = request.form.get("content", "").strip()
         if not content:
@@ -407,6 +383,91 @@ def recap_new(league_code):
 
     conn.close()
     return render_template("recap_new.html", team=team, league=league)
+
+
+# ============================================================
+# Recap & Start/Sit generation
+# ============================================================
+
+@app.route("/l/<league_code>/recap/generate", methods=["POST"])
+@login_required
+def recap_generate(league_code):
+    """Auto-generate recap for a given week."""
+    _validate_csrf()
+    team = get_session_team(flask_session.get("session_id", ""))
+    conn = get_db()
+    league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
+    if not league:
+        abort(404)
+    conn.close()
+
+    week = int(request.form.get("week", 0))
+
+    try:
+        from sleeper_recap import generate_recap
+        content = generate_recap(league["sleeper_league_id"], week=week)
+    except Exception as e:
+        flash(f"Recap generation failed: {str(e)}")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO recaps (league_id, week, content, created_by) VALUES (?, ?, ?, ?)",
+        (league["id"], week, content, team["id"])
+    )
+    conn.commit()
+    conn.close()
+    _auto_backup()
+    flash("Recap generated successfully.")
+    return redirect(url_for("team_dashboard", league_code=league_code))
+
+
+@app.route("/l/<league_code>/startsit", methods=["POST"])
+@login_required
+def startsit_advice(league_code):
+    """Generate start/sit advice for the team."""
+    _validate_csrf()
+    team = get_session_team(flask_session.get("session_id", ""))
+    conn = get_db()
+    league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
+    if not league:
+        abort(404)
+    conn.close()
+
+    week = int(request.form.get("week", 0))
+
+    try:
+        from sleeper_recap import generate_startsit
+        content = generate_startsit(league["sleeper_league_id"], week=week)
+    except Exception as e:
+        flash(f"Start/Sit generation failed: {str(e)}")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    return render_template("startsit.html", team=team, league=league, content=content, week=week)
+
+
+@app.route("/l/<league_code>/waivers", methods=["POST"])
+@login_required
+def waiver_advice(league_code):
+    """Generate waiver advice for the team."""
+    _validate_csrf()
+    team = get_session_team(flask_session.get("session_id", ""))
+    conn = get_db()
+    league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
+    if not league:
+        abort(404)
+    conn.close()
+
+    week = int(request.form.get("week", 0))
+
+    try:
+        from sleeper_recap import generate_waivers
+        content = generate_waivers(league["sleeper_league_id"], week=week)
+    except Exception as e:
+        flash(f"Waiver generation failed: {str(e)}")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    return render_template("waivers.html", team=team, league=league, content=content, week=week)
 
 
 # ============================================================
@@ -463,7 +524,6 @@ def webhook_post(league_code, recap_id):
                 payload = {"content": recap["content"]}
                 resp = requests.post(hook["webhook_url"], json=payload, timeout=10)
             elif hook["webhook_type"] == "telegram":
-                # Telegram bot API
                 bot_token = hook["webhook_url"].split("/")[-1]
                 chat_id = hook["webhook_url"].split("/")[-2]
                 api_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -523,88 +583,6 @@ def league_rss(league_code):
     response = make_response(rss)
     response.headers["Content-Type"] = "application/rss+xml"
     return response
-
-
-# ============================================================
-# Recap & Start/Sit generation
-# ============================================================
-
-@app.route("/l/<league_code>/recap/generate", methods=["POST"])
-@login_required
-def recap_generate(league_code):
-    """Auto-generate recap for a given week."""
-    team = get_session_team(flask_session.get("session_id", ""))
-    conn = get_db()
-    league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
-    if not league:
-        abort(404)
-    conn.close()
-
-    week = int(request.form.get("week", 0))
-
-    try:
-        from sleeper_recap import generate_recap
-        content = generate_recap(league["sleeper_league_id"], week=week)
-    except Exception as e:
-        flash(f"Recap generation failed: {str(e)}")
-        return redirect(url_for("team_dashboard", league_code=league_code))
-
-    conn = get_db()
-    conn.execute(
-        "INSERT INTO recaps (league_id, week, content, created_by) VALUES (?, ?, ?, ?)",
-        (league["id"], week, content, team["id"])
-    )
-    conn.commit()
-    conn.close()
-    _auto_backup()
-    flash("Recap generated successfully.")
-    return redirect(url_for("team_dashboard", league_code=league_code))
-
-
-@app.route("/l/<league_code>/startsit", methods=["POST"])
-@login_required
-def startsit_advice(league_code):
-    """Generate start/sit advice for the team."""
-    team = get_session_team(flask_session.get("session_id", ""))
-    conn = get_db()
-    league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
-    if not league:
-        abort(404)
-    conn.close()
-
-    week = int(request.form.get("week", 0))
-
-    try:
-        from sleeper_recap import generate_startsit
-        content = generate_startsit(league["sleeper_league_id"], week=week)
-    except Exception as e:
-        flash(f"Start/Sit generation failed: {str(e)}")
-        return redirect(url_for("team_dashboard", league_code=league_code))
-
-    return render_template("startsit.html", team=team, league=league, content=content, week=week)
-
-
-@app.route("/l/<league_code>/waivers", methods=["POST"])
-@login_required
-def waiver_advice(league_code):
-    """Generate waiver advice for the team."""
-    team = get_session_team(flask_session.get("session_id", ""))
-    conn = get_db()
-    league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
-    if not league:
-        abort(404)
-    conn.close()
-
-    week = int(request.form.get("week", 0))
-
-    try:
-        from sleeper_recap import generate_waivers
-        content = generate_waivers(league["sleeper_league_id"], week=week)
-    except Exception as e:
-        flash(f"Waiver generation failed: {str(e)}")
-        return redirect(url_for("team_dashboard", league_code=league_code))
-
-    return render_template("waivers.html", team=team, league=league, content=content, week=week)
 
 
 # ============================================================

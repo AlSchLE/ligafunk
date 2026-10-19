@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Admin Login — Sleeper Web{% endblock %}
+
+{% block content %}
+<div class="login-container">
+  <div class="card login-card">
+    <h1>🔐 Admin Login</h1>
+    <p class="tagline">Enter admin password to continue</p>
+    <form method="post">
+      <input type="hidden" name="next" value="{{ next }}">
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" required placeholder="Admin password" autofocus>
+      </div>
+      <button type="submit" class="btn btn-full">Login</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
