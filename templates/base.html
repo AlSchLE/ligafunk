@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Sleeper Web{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏈</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
 </head>
 <body>
   <nav class="navbar">
-    <a href="{{ url_for('index') }}" class="brand">🏈 Sleeper Web</a>
     <div class="nav-links">
       {% if current_team %}
         <a href="{{ url_for('team_dashboard', league_code=current_team.league_code) if current_team.league_code else url_for('index') }}">Dashboard</a>
         <a href="{{ url_for('logout', league_code=current_team.league_code) if current_team.league_code else '#' }}">Logout</a>
       {% endif %}
       <a href="{{ url_for('admin') }}">Admin</a>
+      <a href="{{ url_for('impressum') }}">Impressum</a>
     </div>
   </nav>
 

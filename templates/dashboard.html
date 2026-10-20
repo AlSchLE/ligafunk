@@ -14,7 +14,7 @@
     <a href="{{ url_for('recap_new', league_code=league.league_code) }}" class="btn">+ New Recap</a>
   </div>
   <div class="card dashboard-card">
-    <h2>🏈 Start/Sit</h2>
+    <h2>Start/Sit</h2>
     <p>Get start/sit advice for your team.</p>
     <form method="post" action="{{ url_for('startsit_advice', league_code=league.league_code) }}">
       <input type="number" name="week" placeholder="Week" min="1" max="25" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">

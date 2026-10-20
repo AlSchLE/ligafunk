@@ -34,10 +34,10 @@ app = Flask(__name__)
 Talisman(
     app,
     content_security_policy=csp,
-    force_https=True,
+    force_https=False,  # Render handles HTTPS
     strict_transport_security=True,
     strict_transport_security_max_age=31536000,
-    session_cookie_secure=True,
+    session_cookie_secure=False,  # Allow behind proxy
     session_cookie_http_only=True,
     session_cookie_samesite='Lax',
 )
@@ -49,7 +49,7 @@ from database import (get_db, init_db, hash_password, verify_password,
 
 app.secret_key = SECRET_KEY
 app.config["SESSION_LIFETIME"] = timedelta(hours=SESSION_LIFETIME_HOURS)
-app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_SECURE"] = False  # Render proxy handles HTTPS
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = 3600  # 1 hour
@@ -124,6 +124,12 @@ def admin_required(f):
     return decorated_function
 
 
+@app.errorhandler(500)
+def internal_error(e):
+    log.error("Internal error: %s", e)
+    return render_template("500.html"), 500
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -154,11 +160,17 @@ def admin_login():
     next_url = request.args.get("next") or url_for("admin")
     if request.method == "POST":
         password = request.form.get("password", "")
-        if hashlib.sha256(password.encode()).hexdigest() == ADMIN_PASSWORD_HASH:
-            flask_session["admin_authenticated"] = True
-            flask_session.permanent = True
-            return redirect(next_url)
-        flash("Invalid password.")
+        try:
+            if hashlib.sha256(password.encode()).hexdigest() == ADMIN_PASSWORD_HASH:
+                flask_session.clear()
+                flask_session["admin_authenticated"] = True
+                flask_session["session_id"] = secrets.token_urlsafe(32)
+                flash("Admin login successful.")
+                return redirect(next_url)
+            flash("Invalid password.")
+        except Exception as e:
+            log.error("Admin login error: %s", e)
+            flash("Login failed. Please try again.")
     return render_template("admin_login.html", next=next_url)
 
 
@@ -167,6 +179,38 @@ def admin_logout():
     flask_session.pop("admin_authenticated", None)
     flash("Logged out.")
     return redirect(url_for("index"))
+
+
+@app.route("/admin/backup")
+@admin_required
+def backup():
+    """Export all data as JSON download."""
+    conn = get_db()
+    leagues = conn.execute("SELECT * FROM leagues").fetchall()
+    teams = conn.execute("SELECT * FROM teams").fetchall()
+    recaps = conn.execute("SELECT * FROM recaps").fetchall()
+    webhooks = conn.execute("SELECT * FROM webhooks").fetchall()
+    conn.close()
+
+    data = {
+        "leagues": [dict(l) for l in leagues],
+        "teams": [dict(t) for t in teams],
+        "recaps": [dict(r) for r in recaps],
+        "webhooks": [dict(w) for w in webhooks],
+        "exported_at": datetime.now().isoformat(),
+    }
+    return jsonify(data)
+
+
+@app.route("/admin/download-backup/<path:filename>")
+@admin_required
+def download_backup(filename):
+    """Download a backup file from the backups directory."""
+    from flask import safe_join
+    safe_path = safe_join(str(BACKUP_DIR), filename)
+    if not safe_path or not os.path.isfile(safe_path):
+        abort(404)
+    return send_file(safe_path, as_attachment=True)
 
 
 # ============================================================
