@@ -19,7 +19,7 @@ if _local_path not in sys.path:
     sys.path.insert(0, _local_path)
 
 from recapcore.client import SleeperClient
-from recapcore.config import LEAGUES, MY_TEAMS
+from recapcore.config import LEAGUES
 from recapcore.narrate import league_recap
 from recapcore.options import (
     DEFAULT_STYLE,
@@ -101,8 +101,38 @@ def generate_recap(
     )
 
 
-def generate_startsit(league_id: str, week: int | None = None) -> str:
-    """Generate start/sit advice for a league."""
+def _resolve_web_team(
+    block: dict[str, Any],
+    *,
+    roster_id: str | int | None = None,
+    team_name: str | None = None,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Pick the roster for the logged-in web team (roster id first, then name)."""
+    names = block.get("team_names") or {}
+    rosters = block.get("rosters") or []
+    if roster_id not in (None, ""):
+        for row in rosters:
+            rid = row.get("roster_id")
+            if str(rid) == str(roster_id):
+                return row, names.get(str(rid), f"Team {rid}")
+    if team_name:
+        wanted = team_name.strip().casefold()
+        for row in rosters:
+            rid = row.get("roster_id")
+            name = names.get(str(rid), f"Team {rid}")
+            if name.strip().casefold() == wanted:
+                return row, name
+    return None, None
+
+
+def generate_startsit(
+    league_id: str,
+    week: int | None = None,
+    *,
+    roster_id: str | int | None = None,
+    team_name: str | None = None,
+) -> str:
+    """Generate start/sit advice for exactly one web team."""
     snapshot = load_snapshot()
     if snapshot is None:
         snapshot = cmd_fetch(week=week)
@@ -127,30 +157,16 @@ def generate_startsit(league_id: str, week: int | None = None) -> str:
     slots = starter_slots(league.get("roster_positions") or [])
     scoring = league.get("scoring") or {}
     last_pts = last_week_league_points(block)
-    names = block.get("team_names") or {}
 
-    # Find user's team
-    my_team_name = None
-    for key, lid in LEAGUES.items():
-        if lid == league_id:
-            my_team_name = MY_TEAMS.get(key)
-            break
-
-    if my_team_name is None:
-        return "No team configured for this league."
-
-    roster = None
-    team_name = my_team_name
-    for row in block.get("rosters") or []:
-        rid = row.get("roster_id")
-        name = names.get(str(rid), f"Team {rid}")
-        if name.strip().casefold() == my_team_name.strip().casefold():
-            roster = row
-            team_name = name
-            break
-
+    # Never fall back to a different configured team: that would leak another
+    # team's lineup advice to the logged-in user.
+    roster, resolved_name = _resolve_web_team(
+        block, roster_id=roster_id, team_name=team_name
+    )
     if roster is None:
-        return f"Team '{my_team_name}' not found in this league."
+        return ("Your team could not be matched to a roster in this Sleeper "
+                "league. Ask the admin to set your Sleeper roster ID.")
+    team_name = resolved_name or "Team"
 
     allowed_by, league_avg = defense_allowed_table(
         ctx["season"],
@@ -187,8 +203,14 @@ def generate_startsit(league_id: str, week: int | None = None) -> str:
     return result
 
 
-def generate_waivers(league_id: str, week: int | None = None) -> str:
-    """Generate waiver wire advice for a league."""
+def generate_waivers(
+    league_id: str,
+    week: int | None = None,
+    *,
+    roster_id: str | int | None = None,
+    team_name: str | None = None,
+) -> str:
+    """Generate waiver advice for exactly one web team."""
     snapshot = load_snapshot()
     if snapshot is None:
         snapshot = cmd_fetch(week=week)
@@ -213,30 +235,16 @@ def generate_waivers(league_id: str, week: int | None = None) -> str:
     slots = starter_slots(league.get("roster_positions") or [])
     scoring = league.get("scoring") or {}
     last_pts = last_week_league_points(block)
-    names = block.get("team_names") or {}
 
-    # Find user's team
-    my_team_name = None
-    for key, lid in LEAGUES.items():
-        if lid == league_id:
-            my_team_name = MY_TEAMS.get(key)
-            break
-
-    if my_team_name is None:
-        return "No team configured for this league."
-
-    roster = None
-    team_name = my_team_name
-    for row in block.get("rosters") or []:
-        rid = row.get("roster_id")
-        name = names.get(str(rid), f"Team {rid}")
-        if name.strip().casefold() == my_team_name.strip().casefold():
-            roster = row
-            team_name = name
-            break
-
+    # Never fall back to a different configured team: that would leak another
+    # team's waiver advice to the logged-in user.
+    roster, resolved_name = _resolve_web_team(
+        block, roster_id=roster_id, team_name=team_name
+    )
     if roster is None:
-        return f"Team '{my_team_name}' not found in this league."
+        return ("Your team could not be matched to a roster in this Sleeper "
+                "league. Ask the admin to set your Sleeper roster ID.")
+    team_name = resolved_name or "Team"
 
     faab = faab_state(league, roster)
     current = {str(s) for s in (roster.get("starters") or []) if s}

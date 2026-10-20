@@ -46,7 +46,7 @@ SPORT_BRANDS = {
 # League ID to sport mapping (customize with your own league IDs)
 LEAGUE_SPORT_MAP = {
     "1389332038909198336": "soccer",      # Saxy Fantasy Land
-    "1387730345675210752": "football",     # NTS NFL Fantasy League 26/27
+    "1387730345675210752": "football",     # Football league
 }
 
 

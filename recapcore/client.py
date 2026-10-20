@@ -31,6 +31,7 @@ from recapcore.config import (
 )
 
 _PATH_RE = re.compile(r"^/[A-Za-z0-9_./-]+$")
+_LEAGUE_ID_RE = re.compile(r"^[0-9]{6,32}$")
 _TRANSIENT = frozenset({429, 500, 502, 503, 504})
 _ALLOWED_HOSTS = frozenset(
     {
@@ -46,6 +47,24 @@ class SleeperAPIError(RuntimeError):
     """Raised when the Sleeper API cannot be used safely or successfully."""
 
 
+def _valid_league_id(league_id: str) -> str:
+    """Only digit-only Sleeper IDs may appear in API paths."""
+    value = str(league_id or "")
+    if not _LEAGUE_ID_RE.fullmatch(value):
+        raise SleeperAPIError("Refusing invalid league id.")
+    return value
+
+
+def _valid_week(week: int) -> int:
+    try:
+        value = int(week)
+    except (TypeError, ValueError) as exc:
+        raise SleeperAPIError("Refusing invalid week.") from exc
+    if not 1 <= value <= 22:
+        raise SleeperAPIError("Refusing invalid week.")
+    return value
+
+
 class SleeperClient:
     def __init__(self) -> None:
         self._session = requests.Session()
@@ -56,6 +75,9 @@ class SleeperClient:
             }
         )
         self._session.verify = True
+        # Ignore proxy/.netrc settings from the environment; only the
+        # allowlisted hosts above may be contacted.
+        self._session.trust_env = False
         self._lock = threading.Lock()
         self._last_call = 0.0
         self.calls = 0
@@ -70,7 +92,7 @@ class SleeperClient:
         self.close()
 
     def get_json(self, path: str, *, max_bytes: int = MAX_JSON_BYTES) -> Any:
-        if not _PATH_RE.fullmatch(path):
+        if not _PATH_RE.fullmatch(path) or ".." in path.split("/"):
             raise SleeperAPIError("Refusing unsafe API path.")
         url = urljoin(API_BASE + "/", path.lstrip("/"))
         if not url.startswith(API_BASE + "/"):
@@ -151,21 +173,25 @@ class SleeperClient:
         return data
 
     def league(self, league_id: str) -> dict[str, Any]:
-        data = self.get_json(f"/league/{league_id}")
+        data = self.get_json(f"/league/{_valid_league_id(league_id)}")
         if not isinstance(data, dict):
             raise SleeperAPIError("Unexpected league payload.")
         return data
 
     def users(self, league_id: str) -> list[dict[str, Any]]:
-        return self.get_json(f"/league/{league_id}/users") or []
+        return self.get_json(f"/league/{_valid_league_id(league_id)}/users") or []
 
     def rosters(self, league_id: str) -> list[dict[str, Any]]:
-        return self.get_json(f"/league/{league_id}/rosters") or []
+        return self.get_json(f"/league/{_valid_league_id(league_id)}/rosters") or []
 
     def matchups(self, league_id: str, week: int) -> list[dict[str, Any]]:
+        league_id = _valid_league_id(league_id)
+        week = _valid_week(week)
         return self.get_json(f"/league/{league_id}/matchups/{week}") or []
 
     def transactions(self, league_id: str, week: int) -> list[dict[str, Any]]:
+        league_id = _valid_league_id(league_id)
+        week = _valid_week(week)
         return self.get_json(f"/league/{league_id}/transactions/{week}") or []
 
     def draft_picks(self, draft_id: str) -> list[dict[str, Any]]:
@@ -174,7 +200,7 @@ class SleeperClient:
         return self.get_json(f"/draft/{draft_id}/picks") or []
 
     def winners_bracket(self, league_id: str) -> list[dict[str, Any]]:
-        return self.get_json(f"/league/{league_id}/winners_bracket") or []
+        return self.get_json(f"/league/{_valid_league_id(league_id)}/winners_bracket") or []
 
     def players_nfl(self) -> dict[str, Any]:
         from recapcore.config import PLAYERS_MAX_JSON_BYTES

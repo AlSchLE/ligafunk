@@ -21,7 +21,7 @@ _LEAGUE_ID_RE = re.compile(r"^[0-9]{6,32}$")
 
 LEAGUES: dict[str, str] = {
     "liga1": "1389332038909198336",  # Saxy Fantasy Land
-    "liga2": "1387730345675210752",  # NTS NFL Fantasy League 26/27
+    "liga2": "1387730345675210752",  # Football league
 }
 
 # Start/sit defaults to these Sleeper team names (case-insensitive).

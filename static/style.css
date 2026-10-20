@@ -67,6 +67,22 @@ a:hover { text-decoration: underline; }
 
 .nav-links a:hover { color: var(--accent); text-decoration: none; }
 
+/* Logout is a POST form so it cannot be triggered cross-site. */
+.logout-form { display: inline; margin: 0; }
+
+.nav-links .link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.nav-links .link-button:hover { color: var(--accent); }
+
 /* Container */
 .container {
   max-width: 1200px;
@@ -291,6 +307,24 @@ a:hover { text-decoration: underline; }
   padding: 0.5rem;
   display: flex;
   justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Admin: revoke a team password / remove a webhook */
+.reset-form, .remove-form {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.reset-form input[type="password"] {
+  max-width: 12rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
 }
 
 /* Badges */
@@ -425,6 +459,37 @@ code {
   font-size: 0.85rem;
   border: 1px solid var(--border);
 }
+
+/* Layout helpers (kept in CSS so the CSP can forbid inline styles) */
+.full-width { width: 100%; }
+
+.week-input {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.admin-warning-card { border-left: 4px solid var(--warning); }
+.inline-form { display: inline; }
+.hidden-file-input { display: none; }
+.home-sport-name {
+  font-size: 2rem;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.impressum-card { max-width: 800px; margin: 0 auto; }
+.impressum-footnote {
+  margin-top: 2rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.mt-1 { margin-top: 1rem; }
+.share-card { margin-top: 1.5rem; }
+.copy-inline { margin-left: 0.5rem; }
 
 /* Responsive */
 @media (max-width: 768px) {

@@ -2,10 +2,10 @@
 {% block title %}Impressum — Ligafunk{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 800px; margin: 0 auto;">
+<div class="card impressum-card">
   <h1>Impressum</h1>
 
-  <h2>Angaben gemäß § 5 TMG</h2>
+  <h2>Angaben gemäß § 5 DDG</h2>
   {% if impressum_configured %}
   <p>
     {{ impressum.name }}<br>
@@ -25,7 +25,7 @@
   <p class="hint">Keine Kontaktadresse konfiguriert.</p>
   {% endif %}
 
-  <h2>Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
+  <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
   {% if impressum_configured %}
   <p>
     {{ impressum.name }}<br>
@@ -42,7 +42,16 @@
 
   <h2>Datenschutz</h2>
   <p>
-    Diese Website verwendet keine Cookies und sammelt keine personenbezogenen Daten. Es werden keine Tracking-Tools eingesetzt. Passwörter werden nur als Salted Hash gespeichert und nie im Klartext.
+    Diese Website verwendet ausschließlich ein technisch notwendiges Session-Cookie
+    für die Anmeldung und den Schutz vor CSRF-Angriffen. Es werden keine
+    Tracking-Tools und keine Analyse-Dienste eingesetzt. Passwörter werden nur als
+    gesalzener Hash gespeichert und nie im Klartext.
+  </p>
+  <p>
+    Zur Abwehr von Angriffen werden IP-Adressen für maximal 24 Stunden in einer
+    lokalen Sicherheitstabelle gespeichert und danach automatisch gelöscht.
+    Server-Logs können IP-Adressen enthalten und werden ausschließlich zur
+    Fehleranalyse und Sicherheit verwendet.
   </p>
 
   <h2>Haftung für Links</h2>
@@ -52,13 +61,14 @@
 
   <h2>Streitschlichtung</h2>
   <p>
-    Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr. Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
+    Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor
+    einer Verbraucherschlichtungsstelle teilzunehmen.
   </p>
 
-  <p style="margin-top: 2rem; color: var(--text-muted); font-size: 0.85rem;">
+  <p class="impressum-footnote">
     Stand: Oktober 2026
   </p>
 
-  <a href="{{ url_for('index') }}" class="btn" style="margin-top: 1rem;">← Zurück zur Startseite</a>
+  <a href="{{ url_for('index') }}" class="btn mt-1">← Zurück zur Startseite</a>
 </div>
 {% endblock %}

@@ -31,7 +31,8 @@
     </div>
     <div class="form-group">
       <label>Recap Content</label>
-      <textarea name="content" rows="15" required placeholder="Paste your recap here..."></textarea>
+      <textarea name="content" rows="15" required maxlength="50000"
+                placeholder="Paste your recap here..."></textarea>
     </div>
     <button type="submit" class="btn">Save Recap</button>
     <a href="{{ url_for('team_dashboard', league_code=league.league_code) }}" class="btn btn-secondary">Cancel</a>

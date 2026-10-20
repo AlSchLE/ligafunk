@@ -10,3 +10,8 @@ admin_web.txt
 .venv/
 venv/
 backups/
+
+# Generated API snapshots and reports can contain league/owner data.
+data/
+logs/
+output/

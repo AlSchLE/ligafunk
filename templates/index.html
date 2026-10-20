@@ -3,7 +3,7 @@
 {% block content %}
 <div class="hero">
   <h1 id="sport-icon">🏆</h1>
-  <h2 id="sport-name" style="font-size: 2rem; color: var(--accent); margin-bottom: 0.5rem;">Fantasy Sports</h2>
+  <h2 id="sport-name" class="home-sport-name">Fantasy Sports</h2>
   <p class="tagline" id="sport-tagline">Recap & Team Management Platform</p>
 </div>
 
@@ -27,37 +27,8 @@
   <h2>⚡ Quick Start</h2>
   <p>Enter your Sleeper League ID to see the correct branding:</p>
   <div class="form-group">
-    <input type="text" id="league-id-input" placeholder="e.g. 1387730345675210752" class="form-input">
-    <button onclick="updateBranding()" class="btn">Update Branding</button>
+    <input type="text" id="league-id-input" placeholder="e.g. 1387730345675210752" class="form-input" autocomplete="off">
+    <button type="button" data-action="update-branding" class="btn">Update Branding</button>
   </div>
 </div>
-
-<script>
-const SPORT_BRANDS = {
-    generic: { name: "Fantasy Sports", icon: "🏆", primary: "#1a472a", accent: "#c9a227", tagline: "Recap & Team Management Platform" },
-    soccer: { name: "Soccer", icon: "⚽", primary: "#006400", accent: "#ffffff", tagline: "Fantasy Soccer League" },
-    football: { name: "Football", icon: "🏈", primary: "#1a472a", accent: "#c9a227", tagline: "Fantasy Football League" },
-    baseball: { name: "Baseball", icon: "⚾", primary: "#003087", accent: "#ff0000", tagline: "Fantasy Baseball League" },
-    basketball: { name: "Basketball", icon: "🏀", primary: "#ff6600", accent: "#000000", tagline: "Fantasy Basketball League" },
-    hockey: { name: "Hockey", icon: "🏒", primary: "#000080", accent: "#ff0000", tagline: "Fantasy Hockey League" }
-};
-
-const LEAGUE_MAP = {
-    "1389332038909198336": "soccer",
-    "1387730345675210752": "football"
-};
-
-function updateBranding() {
-    const leagueId = document.getElementById('league-id-input').value.trim();
-    const sportKey = LEAGUE_MAP[leagueId] || 'generic';
-    const brand = SPORT_BRANDS[sportKey];
-
-    document.getElementById('sport-icon').textContent = brand.icon;
-    document.getElementById('sport-name').textContent = brand.name;
-    document.getElementById('sport-tagline').textContent = brand.tagline;
-
-    document.documentElement.style.setProperty('--primary', brand.primary);
-    document.documentElement.style.setProperty('--accent', brand.accent);
-}
-</script>
 {% endblock %}

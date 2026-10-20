@@ -18,8 +18,8 @@
     <p>Get start/sit advice for your team.</p>
     <form method="post" action="{{ url_for('startsit_advice', league_code=league.league_code) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-      <input type="number" name="week" placeholder="Week" min="1" max="22" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-      <button type="submit" class="btn" style="width:100%;">Get Advice</button>
+      <input type="number" name="week" placeholder="Week" min="1" max="22" class="week-input">
+      <button type="submit" class="btn full-width">Get Advice</button>
     </form>
   </div>
   <div class="card dashboard-card">
@@ -27,8 +27,8 @@
     <p>Get waiver wire advice for your team.</p>
     <form method="post" action="{{ url_for('waiver_advice', league_code=league.league_code) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-      <input type="number" name="week" placeholder="Week" min="1" max="22" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-      <button type="submit" class="btn" style="width:100%;">Get Waivers</button>
+      <input type="number" name="week" placeholder="Week" min="1" max="22" class="week-input">
+      <button type="submit" class="btn full-width">Get Waivers</button>
     </form>
   </div>
   <div class="card dashboard-card">
@@ -41,7 +41,10 @@
 <div class="card">
   <h2>⚡ Recap Generator</h2>
   <p>Wähle Woche, Stimme und Theme. Jede Generierung ergibt einen neuen Text.</p>
-  <form method="post" action="{{ url_for('recap_generate', league_code=league.league_code) }}">
+  <form method="post" action="{{ url_for('recap_generate', league_code=league.league_code) }}"
+        id="recap-generator-form"
+        data-recap-styles='{{ recap_styles|tojson }}'
+        data-recap-themes='{{ recap_themes|tojson }}'>
     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
     <div class="recap-form-grid">
       <div class="form-group">
@@ -71,31 +74,6 @@
     <p class="hint" id="recap-hint"></p>
   </form>
 </div>
-
-<script>
-(function () {
-  const styles = {{ recap_styles|tojson }};
-  const themes = {{ recap_themes|tojson }};
-  const styleSelect = document.getElementById('recap-style');
-  const themeSelect = document.getElementById('recap-theme');
-  const hint = document.getElementById('recap-hint');
-
-  function refreshHint() {
-    const s = styles[styleSelect.value] || {};
-    const t = themes[themeSelect.value] || {};
-    hint.textContent = (s.description || '') + (t.description ? ' · ' + t.description : '');
-  }
-
-  // Seasonal suggestion, only on first load and only for known themes.
-  const month = new Date().getMonth() + 1;
-  if (month === 12 && themes.christmas) themeSelect.value = 'christmas';
-  if (month === 10 && themes.halloween) themeSelect.value = 'halloween';
-
-  styleSelect.addEventListener('change', refreshHint);
-  themeSelect.addEventListener('change', refreshHint);
-  refreshHint();
-})();
-</script>
 
 {% if recaps %}
 <div class="card">
