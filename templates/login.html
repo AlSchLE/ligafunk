@@ -7,6 +7,7 @@
     <h1>🔐 Team Login</h1>
     <p class="tagline">{{ league.name }}</p>
     <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
       <div class="form-group">
         <label>Team</label>
         <select name="team_id" required>

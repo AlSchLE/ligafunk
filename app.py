@@ -6,7 +6,7 @@ Run:  python app.py            (dev, port 5000)
 """
 import os
 import json
-import hashlib
+import hmac
 import secrets
 import requests
 from datetime import datetime, timedelta
@@ -17,6 +17,7 @@ from flask import (Flask, render_template, request, redirect,
                    url_for, flash, abort, jsonify, send_file,
                    make_response, session as flask_session)
 from flask_talisman import Talisman
+from werkzeug.security import check_password_hash
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -31,32 +32,58 @@ csp = {
 }
 
 app = Flask(__name__)
+
+# Render terminates TLS at its proxy and forwards the original scheme via
+# X-Forwarded-Proto. Trust exactly one proxy hop so url_for(), secure cookies
+# and the HTTPS redirect all see the real scheme. Disabled for local HTTP dev.
+IS_PRODUCTION = bool(os.environ.get("RENDER")) or os.environ.get("FORCE_HTTPS") == "1"
+if IS_PRODUCTION:
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
 Talisman(
     app,
     content_security_policy=csp,
-    force_https=False,  # Render handles HTTPS
-    strict_transport_security=True,
+    force_https=IS_PRODUCTION,
+    strict_transport_security=IS_PRODUCTION,
     strict_transport_security_max_age=31536000,
-    session_cookie_secure=False,  # Allow behind proxy
+    strict_transport_security_include_subdomains=True,
+    session_cookie_secure=IS_PRODUCTION,
     session_cookie_http_only=True,
     session_cookie_samesite='Lax',
 )
 
-from config import DATABASE_PATH, SECRET_KEY, SESSION_LIFETIME_HOURS
+from config import (DATABASE_PATH, SECRET_KEY, SESSION_LIFETIME_HOURS,
+                    ADMIN_PASSWORD, ADMIN_PASSWORD_HASH, ADMIN_ENABLED,
+                    IMPRESSUM, IMPRESSUM_CONFIGURED)
 from database import (get_db, init_db, hash_password, verify_password,
                       generate_league_code, create_session,
                       get_session_team, delete_session)
 
 app.secret_key = SECRET_KEY
 app.config["SESSION_LIFETIME"] = timedelta(hours=SESSION_LIFETIME_HOURS)
-app.config["SESSION_COOKIE_SECURE"] = False  # Render proxy handles HTTPS
+app.config["SESSION_COOKIE_SECURE"] = IS_PRODUCTION
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = 3600  # 1 hour
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB upload limit
 
-# Admin password (in production, use environment variable)
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "nm83n4838334!&%-sdgawhwdsDCXVXY")
-ADMIN_PASSWORD_HASH = hashlib.sha256(ADMIN_PASSWORD.encode()).hexdigest()
+def _verify_admin_password(candidate: str) -> bool:
+    """Check the submitted password against the configured hash or plaintext.
+
+    Returns False when no admin secret is configured.
+    """
+    if not candidate:
+        return False
+    if ADMIN_PASSWORD_HASH:
+        try:
+            return check_password_hash(ADMIN_PASSWORD_HASH, candidate)
+        except (ValueError, TypeError):
+            log.error("ADMIN_PASSWORD_HASH is not a valid Werkzeug hash")
+            return False
+    if ADMIN_PASSWORD:
+        return hmac.compare_digest(candidate, ADMIN_PASSWORD)
+    return False
 
 # Auto-backup directory
 BACKUP_DIR = Path(__file__).resolve().parent / "backups"
@@ -152,26 +179,45 @@ def index():
 
 @app.route("/impressum")
 def impressum():
-    return render_template("impressum.html")
+    return render_template("impressum.html", impressum=IMPRESSUM,
+                           impressum_configured=IMPRESSUM_CONFIGURED)
+
+
+def _safe_next_url(candidate):
+    """Only allow same-site relative redirect targets."""
+    fallback = url_for("admin")
+    if not candidate:
+        return fallback
+    if not candidate.startswith("/") or candidate.startswith("//"):
+        return fallback
+    return candidate
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
-    next_url = request.args.get("next") or url_for("admin")
+    next_url = _safe_next_url(request.form.get("next") or request.args.get("next"))
+
+    if not ADMIN_ENABLED:
+        log.error("Admin login attempted, but ADMIN_PASSWORD/ADMIN_PASSWORD_HASH is not set")
+        return render_template("admin_login.html", next=next_url,
+                               admin_enabled=False), 503
+
     if request.method == "POST":
+        _validate_csrf()
         password = request.form.get("password", "")
         try:
-            if hashlib.sha256(password.encode()).hexdigest() == ADMIN_PASSWORD_HASH:
+            if _verify_admin_password(password):
                 flask_session.clear()
                 flask_session["admin_authenticated"] = True
                 flask_session["session_id"] = secrets.token_urlsafe(32)
                 flash("Admin login successful.")
                 return redirect(next_url)
             flash("Invalid password.")
+            log.warning("Failed admin login attempt from %s", request.remote_addr)
         except Exception as e:
             log.error("Admin login error: %s", e)
             flash("Login failed. Please try again.")
-    return render_template("admin_login.html", next=next_url)
+    return render_template("admin_login.html", next=next_url, admin_enabled=True)
 
 
 @app.route("/admin/logout")
@@ -213,6 +259,71 @@ def download_backup(filename):
     return send_file(safe_path, as_attachment=True)
 
 
+# Whitelisted table columns for backup import (never derived from user input).
+_BACKUP_SCHEMA = {
+    "leagues": ("id", "name", "sleeper_league_id", "league_code", "created_at"),
+    "teams": ("id", "league_id", "name", "owner_name", "sleeper_roster_id",
+              "password_hash", "created_at"),
+    "recaps": ("id", "league_id", "week", "content", "created_by", "created_at"),
+    "webhooks": ("id", "league_id", "webhook_type", "webhook_url", "created_at"),
+}
+
+
+@app.route("/admin/import", methods=["POST"])
+@admin_required
+def import_backup():
+    """Restore leagues, teams, recaps and webhooks from a JSON backup."""
+    _validate_csrf()
+
+    upload = request.files.get("backup_file")
+    if not upload or not upload.filename:
+        flash("No backup file selected.")
+        return redirect(url_for("admin"))
+
+    try:
+        data = json.load(upload.stream)
+    except (ValueError, UnicodeDecodeError):
+        flash("Import failed: the file is not valid JSON.")
+        return redirect(url_for("admin"))
+    if not isinstance(data, dict):
+        flash("Import failed: expected a JSON object.")
+        return redirect(url_for("admin"))
+
+    counts = {}
+    conn = get_db()
+    try:
+        for table, columns in _BACKUP_SCHEMA.items():
+            rows = data.get(table) or []
+            if not isinstance(rows, list):
+                raise ValueError(f"'{table}' must be a list")
+            placeholders = ", ".join("?" for _ in columns)
+            column_list = ", ".join(columns)
+            inserted = 0
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                values = [row.get(c) for c in columns]
+                conn.execute(
+                    f"INSERT OR REPLACE INTO {table} ({column_list}) VALUES ({placeholders})",
+                    values,
+                )
+                inserted += 1
+            counts[table] = inserted
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        log.error("Backup import failed: %s", e)
+        flash(f"Import failed: {e}")
+        return redirect(url_for("admin"))
+    finally:
+        conn.close()
+
+    _auto_backup()
+    summary = ", ".join(f"{n} {table}" for table, n in counts.items())
+    flash(f"Backup imported: {summary}")
+    return redirect(url_for("admin"))
+
+
 # ============================================================
 # Admin (protected)
 # ============================================================
@@ -221,6 +332,7 @@ def download_backup(filename):
 @admin_required
 def admin():
     if request.method == "POST":
+        _validate_csrf()
         action = request.form.get("action")
 
         if action == "add_league":
@@ -359,6 +471,7 @@ def login(league_code):
     conn.close()
 
     if request.method == "POST":
+        _validate_csrf()
         team_id = int(request.form.get("team_id"))
         password = request.form.get("password", "")
 
@@ -547,6 +660,7 @@ def share_recap(league_code, recap_id):
 @app.route("/l/<league_code>/webhook/<int:recap_id>", methods=["POST"])
 def webhook_post(league_code, recap_id):
     """Post recap to configured webhooks (Slack/Discord/Telegram)."""
+    _validate_csrf()
     conn = get_db()
     league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
     if not league:
@@ -638,4 +752,5 @@ with app.app_context():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=True)
+    debug = os.environ.get("FLASK_DEBUG") == "1"
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=debug)

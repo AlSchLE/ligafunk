@@ -1,4 +1,4 @@
-# Sleeper Web — League Recap & Team Management Platform
+# Ligafunk — League Recap & Team Management Platform
 
 Fantasy-Sport-Plattform für Sleeper-Ligen mit Recaps, Team-Verwaltung und Multi-Channel-Distribution.
 
@@ -27,6 +27,32 @@ python app.py
 ```powershell
 docker-compose up -d
 ```
+
+## Konfiguration & Geheimnisse
+
+Im Repository stehen **keine** Passwörter, Adressen oder E-Mail-Adressen.
+Alles wird über Umgebungsvariablen gesetzt (lokal über eine `.env`-Datei,
+siehe `.env.example`).
+
+| Variable | Pflicht | Beschreibung |
+|---|---|---|
+| `SECRET_KEY` | Produktion | Zufälliger Schlüssel zum Signieren der Session-Cookies |
+| `DATABASE_PATH` | Nein | Pfad zur SQLite-Datei (Render: `/tmp/sleeper_web.db`) |
+| `ADMIN_PASSWORD_HASH` | Ja (Produktion) | Werkzeug-Hash des Admin-Passworts (empfohlen) |
+| `ADMIN_PASSWORD` | Nur lokal | Klartext-Alternative für die Entwicklung |
+| `IMPRESSUM_NAME` | Ja (Impressum) | Name des Anbieters |
+| `IMPRESSUM_STREET` | Ja (Impressum) | Straße und Hausnummer |
+| `IMPRESSUM_CITY` | Ja (Impressum) | PLZ und Ort |
+| `IMPRESSUM_EMAIL` | Ja (Impressum) | Kontakt-E-Mail |
+
+Admin-Hash erzeugen:
+
+```powershell
+python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('DEIN-PASSWORT'))"
+```
+
+Ist weder `ADMIN_PASSWORD_HASH` noch `ADMIN_PASSWORD` gesetzt, ist der
+Admin-Login deaktiviert (HTTP 503). Es gibt keinen eingebauten Fallback.
 
 ## Admin-Panel
 

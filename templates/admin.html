@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Admin — Sleeper Web{% endblock %}
+{% block title %}Admin — Ligafunk{% endblock %}
 
 {% block content %}
 <h1>⚙️ Admin Panel</h1>
@@ -10,6 +10,7 @@
   <div class="share-buttons">
     <a href="{{ url_for('backup') }}" class="btn" download>📥 Download Backup</a>
     <form method="post" action="{{ url_for('import_backup') }}" enctype="multipart/form-data" style="display:inline">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
       <input type="file" name="backup_file" accept=".json" required style="display:none" id="backup-file-input" onchange="this.form.submit()">
       <button type="button" class="btn btn-secondary" onclick="document.getElementById('backup-file-input').click()">📤 Import Backup</button>
     </form>
@@ -20,6 +21,7 @@
   <div class="card">
     <h2>➕ Add League</h2>
     <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="action" value="add_league">
       <div class="form-group">
         <label>League Name</label>
@@ -36,6 +38,7 @@
   <div class="card">
     <h2>👥 Add Team</h2>
     <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="action" value="add_team">
       <div class="form-group">
         <label>League</label>
@@ -68,6 +71,7 @@
   <div class="card">
     <h2>🔗 Add Webhook</h2>
     <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="action" value="add_webhook">
       <div class="form-group">
         <label>League</label>

@@ -1,19 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Admin Login — Sleeper Web{% endblock %}
+{% block title %}Admin Login — Ligafunk{% endblock %}
 
 {% block content %}
 <div class="login-container">
   <div class="card login-card">
     <h1>🔐 Admin Login</h1>
-    <p class="tagline">Enter admin password to continue</p>
-    <form method="post">
-      <input type="hidden" name="next" value="{{ next }}">
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" name="password" required placeholder="Admin password" autofocus>
-      </div>
-      <button type="submit" class="btn btn-full">Login</button>
-    </form>
+    {% if admin_enabled %}
+      <p class="tagline">Enter admin password to continue</p>
+      <form method="post">
+        <input type="hidden" name="next" value="{{ next }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" required placeholder="Admin password" autofocus>
+        </div>
+        <button type="submit" class="btn btn-full">Login</button>
+      </form>
+    {% else %}
+      <p class="tagline">Admin login is not configured on this server.</p>
+      <p class="hint">
+        Set the <code>ADMIN_PASSWORD_HASH</code> environment variable
+        (or <code>ADMIN_PASSWORD</code> for local development) and restart the service.
+      </p>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
