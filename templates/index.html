@@ -34,6 +34,7 @@
 
 <script>
 const SPORT_BRANDS = {
+    generic: { name: "Fantasy Sports", icon: "🏆", primary: "#1a472a", accent: "#c9a227", tagline: "Recap & Team Management Platform" },
     soccer: { name: "Soccer", icon: "⚽", primary: "#006400", accent: "#ffffff", tagline: "Fantasy Soccer League" },
     football: { name: "Football", icon: "🏈", primary: "#1a472a", accent: "#c9a227", tagline: "Fantasy Football League" },
     baseball: { name: "Baseball", icon: "⚾", primary: "#003087", accent: "#ff0000", tagline: "Fantasy Baseball League" },
@@ -48,7 +49,7 @@ const LEAGUE_MAP = {
 
 function updateBranding() {
     const leagueId = document.getElementById('league-id-input').value.trim();
-    const sportKey = LEAGUE_MAP[leagueId] || 'football';
+    const sportKey = LEAGUE_MAP[leagueId] || 'generic';
     const brand = SPORT_BRANDS[sportKey];
 
     document.getElementById('sport-icon').textContent = brand.icon;

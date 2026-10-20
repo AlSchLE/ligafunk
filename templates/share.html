@@ -7,34 +7,34 @@
   <p class="tagline">{{ league.name }} — Week {{ recap.week }}</p>
 
   <div class="share-options">
-    <a href="{{ whatsapp_url }}" target="_blank" class="btn-share whatsapp">
+    <a href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer" class="btn-share whatsapp">
       <span class="share-icon">📱</span>
       <span>WhatsApp</span>
     </a>
 
-    <button onclick="copyToClipboard('{{ recap_text|escape }}', this)" class="btn-share signal">
+    <button type="button" data-copy="{{ recap_text }}" onclick="copyToClipboard(this.dataset.copy, this)" class="btn-share signal">
       <span class="share-icon">📋</span>
       <span>Copy for Signal</span>
     </button>
 
-    <button onclick="copyToClipboard('{{ recap_url }}', this)" class="btn-share link">
+    <button type="button" data-copy="{{ recap_url }}" onclick="copyToClipboard(this.dataset.copy, this)" class="btn-share link">
       <span class="share-icon">🔗</span>
       <span>Copy Link</span>
     </button>
 
-    <button onclick="copyToClipboard('{{ recap.content|escape }}', this)" class="btn-share text">
+    <button type="button" data-copy="{{ recap.content }}" onclick="copyToClipboard(this.dataset.copy, this)" class="btn-share text">
       <span class="share-icon">📄</span>
       <span>Copy Text</span>
     </button>
 
     {% for hook in webhooks %}
-      <button onclick="postWebhook({{ recap.id }}, '{{ hook.webhook_type }}', this)" class="btn-share webhook">
+      <button type="button" onclick="postWebhook({{ recap.id }}, '{{ hook.webhook_type }}', this)" class="btn-share webhook">
         <span class="share-icon">🚀</span>
         <span>Post to {{ hook.webhook_type|capitalize }}</span>
       </button>
     {% endfor %}
 
-    <a href="mailto:?subject={{ league.name }} — Week {{ recap.week }} Recap&body={{ recap_text|escape }}" class="btn-share email">
+    <a href="mailto:?subject={{ (league.name ~ ' — Week ' ~ recap.week ~ ' Recap')|urlencode }}&body={{ recap_text|urlencode }}" class="btn-share email">
       <span class="share-icon">📧</span>
       <span>E-Mail</span>
     </a>
@@ -43,16 +43,21 @@
   <div class="card" style="margin-top: 1.5rem;">
     <h3>Recap URL</h3>
     <code class="recap-url">{{ recap_url }}</code>
-    <button onclick="copyToClipboard('{{ recap_url }}', this)" class="btn-small" style="margin-left: 0.5rem;">📋 Copy</button>
+    <button type="button" data-copy="{{ recap_url }}" onclick="copyToClipboard(this.dataset.copy, this)" class="btn-small" style="margin-left: 0.5rem;">📋 Copy</button>
   </div>
 
   <a href="{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id) }}" class="btn">← Back to Recap</a>
 </div>
 
 <script>
+const RECAP_CSRF_TOKEN = {{ csrf_token|tojson }};
+
 function postWebhook(recapId, type, btn) {
   btn.textContent = "Posting...";
-  fetch(`/l/{{ league.league_code }}/webhook/${recapId}`, {method: 'POST'})
+  fetch(`/l/{{ league.league_code }}/webhook/${recapId}`, {
+    method: 'POST',
+    headers: {'X-CSRF-Token': RECAP_CSRF_TOKEN}
+  })
     .then(r => r.json())
     .then(data => {
       const ok = data.results.every(r => r.status === 200);

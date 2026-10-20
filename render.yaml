@@ -10,3 +10,15 @@ services:
         generateValue: true
       - key: DATABASE_PATH
         value: /tmp/sleeper_web.db
+      # Secrets below are NOT stored in the repository.
+      # sync: false means the value must be entered in the Render dashboard.
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: IMPRESSUM_NAME
+        sync: false
+      - key: IMPRESSUM_STREET
+        sync: false
+      - key: IMPRESSUM_CITY
+        sync: false
+      - key: IMPRESSUM_EMAIL
+        sync: false

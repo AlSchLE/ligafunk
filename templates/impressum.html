@@ -1,27 +1,39 @@
 {% extends "base.html" %}
-{% block title %}Impressum — Sleeper Web{% endblock %}
+{% block title %}Impressum — Ligafunk{% endblock %}
 
 {% block content %}
 <div class="card" style="max-width: 800px; margin: 0 auto;">
   <h1>Impressum</h1>
 
   <h2>Angaben gemäß § 5 TMG</h2>
+  {% if impressum_configured %}
   <p>
-    Alexander Schrader<br>
-    Kommandant-Prendel-Allee 107<br>
-    04299 Leipzig
+    {{ impressum.name }}<br>
+    {{ impressum.street }}<br>
+    {{ impressum.city }}
   </p>
+  {% else %}
+  <p class="hint">Die Anbieterkennzeichnung ist auf diesem Server noch nicht konfiguriert.</p>
+  {% endif %}
 
   <h2>Kontakt</h2>
+  {% if impressum.email %}
   <p>
-    E-Mail: web@schrader-leipzig.de
+    E-Mail: <a href="mailto:{{ impressum.email }}">{{ impressum.email }}</a>
   </p>
+  {% else %}
+  <p class="hint">Keine Kontaktadresse konfiguriert.</p>
+  {% endif %}
 
   <h2>Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
+  {% if impressum_configured %}
   <p>
-    Alexander Schrader<br>
+    {{ impressum.name }}<br>
     [Anschrift wie oben]
   </p>
+  {% else %}
+  <p class="hint">Nicht konfiguriert.</p>
+  {% endif %}
 
   <h2>Urheberrecht</h2>
   <p>

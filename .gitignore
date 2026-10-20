@@ -3,6 +3,10 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+.env.*
+!.env.example
+*.secret
+admin_web.txt
 .venv/
 venv/
 backups/

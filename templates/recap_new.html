@@ -6,6 +6,7 @@
   <h1>📋 New Recap</h1>
   <p class="tagline">{{ team.name }} — {{ league.name }}</p>
   <form method="post">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
     <div class="form-group">
       <label>Week</label>
       <input type="number" name="week" required min="1" max="25" placeholder="e.g. 5">
