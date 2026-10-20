@@ -315,6 +315,28 @@ a:hover { text-decoration: underline; }
 .badge-discord { background: #5865f2; }
 .badge-telegram { background: #0088cc; }
 
+.badge.style-badge { background: var(--primary-light); color: #fff; }
+.badge.theme-badge { background: var(--accent); color: #111; }
+
+.recap-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Recap generator form */
+.recap-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.recap-submit .btn {
+  width: 100%;
+}
+
 /* Recap */
 .recap-content {
   white-space: pre-wrap;

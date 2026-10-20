@@ -9,6 +9,7 @@ import json
 import hmac
 import secrets
 import requests
+from xml.sax.saxutils import escape as xml_escape
 from datetime import datetime, timedelta
 from functools import wraps
 from pathlib import Path
@@ -59,6 +60,12 @@ from config import (DATABASE_PATH, SECRET_KEY, SESSION_LIFETIME_HOURS,
 from database import (get_db, init_db, hash_password, verify_password,
                       generate_league_code, create_session,
                       get_session_team, delete_session)
+from recapcore.options import (
+    STYLE_META as RECAP_STYLES,
+    THEME_META as RECAP_THEMES,
+    normalize_style,
+    normalize_theme,
+)
 
 app.secret_key = SECRET_KEY
 app.config["SESSION_LIFETIME"] = timedelta(hours=SESSION_LIFETIME_HOURS)
@@ -139,7 +146,11 @@ def _validate_csrf():
 
 @app.context_processor
 def inject_csrf_token():
-    return {"csrf_token": _csrf_token()}
+    return {
+        "csrf_token": _csrf_token(),
+        "recap_styles": RECAP_STYLES,
+        "recap_themes": RECAP_THEMES,
+    }
 
 
 def admin_required(f):
@@ -191,6 +202,23 @@ def _safe_next_url(candidate):
     if not candidate.startswith("/") or candidate.startswith("//"):
         return fallback
     return candidate
+
+
+def _parse_week(value) -> int | None:
+    """Parse a week number from a form value. Returns None when invalid."""
+    try:
+        week = int(value)
+    except (TypeError, ValueError):
+        return None
+    return week if 1 <= week <= 22 else None
+
+
+def _require_team_in_league(team, league) -> None:
+    """Stop a logged-in team from reaching another league's team tools."""
+    if not league:
+        abort(404)
+    if not team or team["league_id"] != league["id"]:
+        abort(403)
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
@@ -264,7 +292,8 @@ _BACKUP_SCHEMA = {
     "leagues": ("id", "name", "sleeper_league_id", "league_code", "created_at"),
     "teams": ("id", "league_id", "name", "owner_name", "sleeper_roster_id",
               "password_hash", "created_at"),
-    "recaps": ("id", "league_id", "week", "content", "created_by", "created_at"),
+    "recaps": ("id", "league_id", "week", "content", "created_by",
+               "created_at", "style", "theme"),
     "webhooks": ("id", "league_id", "webhook_type", "webhook_url", "created_at"),
 }
 
@@ -503,6 +532,7 @@ def team_dashboard(league_code):
     team = get_session_team(flask_session.get("session_id", ""))
     conn = get_db()
     league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
+    _require_team_in_league(team, league)
     my_recaps = conn.execute(
         "SELECT * FROM recaps WHERE league_id = ? AND created_by = ? ORDER BY created_at DESC",
         (league["id"], team["id"])
@@ -517,20 +547,25 @@ def recap_new(league_code):
     team = get_session_team(flask_session.get("session_id", ""))
     conn = get_db()
     league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
-    if not league:
-        abort(404)
+    _require_team_in_league(team, league)
 
     if request.method == "POST":
         _validate_csrf()
-        week = int(request.form.get("week", 0))
+        week = _parse_week(request.form.get("week"))
+        if week is None:
+            flash("Please enter a valid week (1-22).")
+            return redirect(url_for("recap_new", league_code=league_code))
         content = request.form.get("content", "").strip()
+        style = normalize_style(request.form.get("style"))
+        theme = normalize_theme(request.form.get("theme"))
         if not content:
             flash("Recap content is required.")
             return redirect(url_for("recap_new", league_code=league_code))
 
         conn.execute(
-            "INSERT INTO recaps (league_id, week, content, created_by) VALUES (?, ?, ?, ?)",
-            (league["id"], week, content, team["id"])
+            "INSERT INTO recaps (league_id, week, content, created_by, style, theme) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (league["id"], week, content, team["id"], style, theme)
         )
         conn.commit()
         conn.close()
@@ -554,23 +589,33 @@ def recap_generate(league_code):
     team = get_session_team(flask_session.get("session_id", ""))
     conn = get_db()
     league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
-    if not league:
-        abort(404)
+    _require_team_in_league(team, league)
     conn.close()
 
-    week = int(request.form.get("week", 0))
+    week = _parse_week(request.form.get("week"))
+    if week is None:
+        flash("Please enter a valid week (1-22).")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+    style = normalize_style(request.form.get("style"))
+    theme = normalize_theme(request.form.get("theme"))
 
     try:
         from sleeper_recap import generate_recap
-        content = generate_recap(league["sleeper_league_id"], week=week)
+        content = generate_recap(
+            league["sleeper_league_id"],
+            week=week,
+            style=style,
+            theme=theme,
+        )
     except Exception as e:
         flash(f"Recap generation failed: {str(e)}")
         return redirect(url_for("team_dashboard", league_code=league_code))
 
     conn = get_db()
     conn.execute(
-        "INSERT INTO recaps (league_id, week, content, created_by) VALUES (?, ?, ?, ?)",
-        (league["id"], week, content, team["id"])
+        "INSERT INTO recaps (league_id, week, content, created_by, style, theme) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (league["id"], week, content, team["id"], style, theme)
     )
     conn.commit()
     conn.close()
@@ -587,11 +632,13 @@ def startsit_advice(league_code):
     team = get_session_team(flask_session.get("session_id", ""))
     conn = get_db()
     league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
-    if not league:
-        abort(404)
+    _require_team_in_league(team, league)
     conn.close()
 
-    week = int(request.form.get("week", 0))
+    week = _parse_week(request.form.get("week"))
+    if week is None:
+        flash("Please enter a valid week (1-22).")
+        return redirect(url_for("team_dashboard", league_code=league_code))
 
     try:
         from sleeper_recap import generate_startsit
@@ -611,11 +658,13 @@ def waiver_advice(league_code):
     team = get_session_team(flask_session.get("session_id", ""))
     conn = get_db()
     league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
-    if not league:
-        abort(404)
+    _require_team_in_league(team, league)
     conn.close()
 
-    week = int(request.form.get("week", 0))
+    week = _parse_week(request.form.get("week"))
+    if week is None:
+        flash("Please enter a valid week (1-22).")
+        return redirect(url_for("team_dashboard", league_code=league_code))
 
     try:
         from sleeper_recap import generate_waivers
@@ -719,21 +768,28 @@ def league_rss(league_code):
     for recap in recaps:
         recap_url = url_for("league_recap", league_code=league_code,
                             recap_id=recap["id"], _external=True)
+        style_key = recap["style"] or "nfl_reporter"
+        theme_key = recap["theme"] or "none"
+        title = f"Week {recap['week']} Recap"
+        if style_key in RECAP_STYLES:
+            title += f" · {RECAP_STYLES[style_key]['name']}"
+        if theme_key != "none" and theme_key in RECAP_THEMES:
+            title += f" · {RECAP_THEMES[theme_key]['name']}"
         rss_items.append(f"""
         <item>
-            <title>Week {recap['week']} Recap</title>
-            <link>{recap_url}</link>
-            <guid>{recap_url}</guid>
-            <pubDate>{recap['created_at']}</pubDate>
-            <description>{recap['content'][:200]}...</description>
+            <title>{xml_escape(title)}</title>
+            <link>{xml_escape(recap_url)}</link>
+            <guid>{xml_escape(recap_url)}</guid>
+            <pubDate>{xml_escape(str(recap['created_at'] or ''))}</pubDate>
+            <description>{xml_escape((recap['content'] or '')[:200])}...</description>
         </item>""")
 
     rss = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
     <channel>
-        <title>{league['name']} — Recap Feed</title>
-        <link>{base_url}</link>
-        <description>Weekly recaps for {league['name']}</description>
+        <title>{xml_escape(league['name'])} — Recap Feed</title>
+        <link>{xml_escape(base_url)}</link>
+        <description>{xml_escape('Weekly recaps for ' + league['name'])}</description>
         {''.join(rss_items)}
     </channel>
 </rss>"""

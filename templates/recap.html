@@ -2,11 +2,19 @@
 {% block title %}Week {{ recap.week }} Recap — {{ league.name }}{% endblock %}
 
 {% block content %}
+{% set style_meta = recap_styles.get(recap.style or 'nfl_reporter') %}
+{% set theme_meta = recap_themes.get(recap.theme or 'none') %}
 <div class="recap-header">
   <h1>📋 Week {{ recap.week }} Recap</h1>
   <p class="tagline">{{ league.name }}</p>
   <div class="recap-meta">
     <span class="week-badge">Week {{ recap.week }}</span>
+    {% if style_meta %}
+      <span class="badge style-badge">{{ style_meta.emoji }} {{ style_meta.name }}</span>
+    {% endif %}
+    {% if theme_meta and recap.theme and recap.theme != 'none' %}
+      <span class="badge theme-badge">{{ theme_meta.emoji }} {{ theme_meta.name }}</span>
+    {% endif %}
     <span class="recap-date">{{ recap.created_at }}</span>
     {% if recap.team_name %}
       <span class="recap-author">by {{ recap.team_name }}</span>
@@ -22,10 +30,10 @@
   <h2>📤 Share this Recap</h2>
   <div class="share-buttons">
     <a href="{{ url_for('share_recap', league_code=league.league_code, recap_id=recap.id) }}" class="btn-share whatsapp">📱 WhatsApp</a>
-    <button onclick="copyToClipboard('{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id, _external=True) }}', this)" class="btn-share signal">📋 Copy Link</button>
-    <button onclick="copyToClipboard('{{ recap.content[:500] }}...', this)" class="btn-share signal">📋 Copy Text</button>
+    <button type="button" data-copy="{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id, _external=True) }}" onclick="copyToClipboard(this.dataset.copy, this)" class="btn-share signal">📋 Copy Link</button>
+    <button type="button" data-copy="{{ recap.content }}" onclick="copyToClipboard(this.dataset.copy, this)" class="btn-share signal">📋 Copy Text</button>
     {% for hook in webhooks %}
-      <button onclick="postWebhook({{ recap.id }}, '{{ hook.webhook_type }}', this)" class="btn-share webhook">🚀 Post to {{ hook.webhook_type }}</button>
+      <button type="button" onclick="postWebhook({{ recap.id }}, '{{ hook.webhook_type }}', this)" class="btn-share webhook">🚀 Post to {{ hook.webhook_type }}</button>
     {% endfor %}
   </div>
 </div>
@@ -35,9 +43,14 @@
 </div>
 
 <script>
+const RECAP_CSRF_TOKEN = {{ csrf_token|tojson }};
+
 function postWebhook(recapId, type, btn) {
   btn.textContent = "Posting...";
-  fetch(`/l/{{ league.league_code }}/webhook/${recapId}`, {method: 'POST'})
+  fetch(`/l/{{ league.league_code }}/webhook/${recapId}`, {
+    method: 'POST',
+    headers: {'X-CSRF-Token': RECAP_CSRF_TOKEN}
+  })
     .then(r => r.json())
     .then(data => {
       const ok = data.results.every(r => r.status === 200);
