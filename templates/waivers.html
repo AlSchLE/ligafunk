@@ -17,9 +17,9 @@
 <div class="share-section">
   <h2>📤 Share</h2>
   <div class="share-buttons">
-    <a href="https://wa.me/?text={{ content[:500] | urlencode }}" target="_blank" class="btn-share whatsapp">📱 WhatsApp</a>
-    <button onclick="copyToClipboard('{{ content | escape }}', this)" class="btn-share signal">📋 Copy</button>
-    <a href="mailto:?subject={{ league.name }} — Waivers Week {{ week }}&body={{ content | urlencode }}" class="btn-share email">📧 E-Mail</a>
+    <a href="https://wa.me/?text={{ content[:500] | urlencode }}" target="_blank" rel="noopener noreferrer" class="btn-share whatsapp">📱 WhatsApp</a>
+    <button type="button" data-copy="{{ content }}" class="btn-share signal">📋 Copy</button>
+    <a href="mailto:?subject={{ (league.name ~ ' — Waivers Week ' ~ week)|urlencode }}&body={{ content | urlencode }}" class="btn-share email">📧 E-Mail</a>
   </div>
 </div>
 {% endblock %}

@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}Ligafunk{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
@@ -11,10 +12,20 @@
   <nav class="navbar">
     <div class="nav-links">
       {% if current_team %}
-        <a href="{{ url_for('team_dashboard', league_code=current_team.league_code) if current_team.league_code else url_for('index') }}">Dashboard</a>
-        <a href="{{ url_for('logout', league_code=current_team.league_code) if current_team.league_code else '#' }}">Logout</a>
+        <a href="{{ url_for('team_dashboard', league_code=current_team.league_code) }}">Dashboard</a>
+        <form method="post" action="{{ url_for('logout', league_code=current_team.league_code) }}" class="logout-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="link-button">Logout</button>
+        </form>
+      {% elif session.get('admin_authenticated') %}
+        <a href="{{ url_for('admin') }}">Admin</a>
+        <form method="post" action="{{ url_for('admin_logout') }}" class="logout-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="link-button">Logout</button>
+        </form>
+      {% else %}
+        <a href="{{ url_for('admin') }}">Admin</a>
       {% endif %}
-      <a href="{{ url_for('admin') }}">Admin</a>
       <a href="{{ url_for('impressum') }}">Impressum</a>
     </div>
   </nav>

@@ -4,15 +4,17 @@
 {% block content %}
 <h1>⚙️ Admin Panel</h1>
 
-<div class="card" style="border-left: 4px solid var(--warning);">
+<div class="card admin-warning-card">
   <h2>💾 Backup & Restore</h2>
   <p>Download a JSON backup of all leagues, teams, recaps and webhooks. Restore after a Render redeploy.</p>
+  <p class="hint">Only import backup files you created yourself. A backup contains team password hashes.</p>
   <div class="share-buttons">
     <a href="{{ url_for('backup') }}" class="btn" download>📥 Download Backup</a>
-    <form method="post" action="{{ url_for('import_backup') }}" enctype="multipart/form-data" style="display:inline">
+    <form method="post" action="{{ url_for('import_backup') }}" enctype="multipart/form-data" class="inline-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-      <input type="file" name="backup_file" accept=".json" required style="display:none" id="backup-file-input" onchange="this.form.submit()">
-      <button type="button" class="btn btn-secondary" onclick="document.getElementById('backup-file-input').click()">📤 Import Backup</button>
+      <input type="file" name="backup_file" accept=".json" required class="hidden-file-input"
+             id="backup-file-input" data-auto-submit>
+      <button type="button" class="btn btn-secondary" data-trigger-file="backup-file-input">📤 Import Backup</button>
     </form>
   </div>
 </div>
@@ -25,11 +27,12 @@
       <input type="hidden" name="action" value="add_league">
       <div class="form-group">
         <label>League Name</label>
-        <input type="text" name="name" required placeholder="e.g. NTS NFL Fantasy League 26/27">
+        <input type="text" name="name" required maxlength="200" placeholder="e.g. Sunday Football League 26/27">
       </div>
       <div class="form-group">
         <label>Sleeper League ID</label>
-        <input type="text" name="sleeper_league_id" required placeholder="e.g. 1387730345675210752">
+        <input type="text" name="sleeper_league_id" required minlength="6" maxlength="32"
+               inputmode="numeric" pattern="[0-9]+" placeholder="e.g. 1387730345675210752">
       </div>
       <button type="submit" class="btn">Create League</button>
     </form>
@@ -50,19 +53,20 @@
       </div>
       <div class="form-group">
         <label>Team Name</label>
-        <input type="text" name="name" required placeholder="e.g. LE Shitheads">
+        <input type="text" name="name" required maxlength="200" placeholder="e.g. LE Shitheads">
       </div>
       <div class="form-group">
         <label>Owner Name</label>
-        <input type="text" name="owner_name" required placeholder="e.g. John">
+        <input type="text" name="owner_name" required maxlength="200" placeholder="e.g. John">
       </div>
       <div class="form-group">
         <label>Sleeper Roster ID (optional)</label>
-        <input type="text" name="sleeper_roster_id" placeholder="e.g. 1">
+        <input type="text" name="sleeper_roster_id" maxlength="3" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 1">
       </div>
       <div class="form-group">
         <label>Team Password</label>
-        <input type="password" name="password" required placeholder="Team password">
+        <input type="password" name="password" required minlength="10" maxlength="256"
+               autocomplete="new-password" placeholder="At least 10 characters">
       </div>
       <button type="submit" class="btn">Add Team</button>
     </form>
@@ -91,11 +95,15 @@
       </div>
       <div class="form-group">
         <label>Webhook URL / Telegram Bot Token</label>
-        <input type="text" name="webhook_url" required placeholder="https://hooks.slack.com/...">
+        <input type="text" name="webhook_url" required maxlength="500" placeholder="https://hooks.slack.com/...">
       </div>
       <button type="submit" class="btn">Add Webhook</button>
     </form>
-    <p class="hint">For Telegram: use format <code>bot_token/chat_id</code></p>
+    <p class="hint">
+      Only official provider endpoints are accepted: <code>hooks.slack.com</code>,
+      <code>discord.com</code> (and <code>ptb</code>/<code>canary</code>),
+      <code>api.telegram.org</code>. For Telegram use <code>bot_token/chat_id</code>.
+    </p>
   </div>
 
   <div class="card">
@@ -114,6 +122,33 @@
       <p class="empty">No leagues yet.</p>
     {% endif %}
   </div>
+</div>
+
+<div class="card">
+  <h2>👥 Teams &amp; Password Reset</h2>
+  {% if teams %}
+    <ul class="team-list">
+      {% for t in teams %}
+        <li>
+          <div>
+            <strong>{{ t.name }}</strong>
+            <span class="team-owner">{{ t.owner_name }} · {{ t.league_name }}</span>
+          </div>
+          <form method="post" class="reset-form">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="action" value="reset_team_password">
+            <input type="hidden" name="team_id" value="{{ t.id }}">
+            <input type="password" name="password" required minlength="10" maxlength="256"
+                   autocomplete="new-password" placeholder="New password">
+            <button type="submit" class="btn-small">Reset</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty">No teams yet.</p>
+  {% endif %}
+  <p class="hint">A reset replaces the password and immediately revokes all active sessions for that team.</p>
 </div>
 
 {% if backups %}
@@ -138,7 +173,13 @@
       <li>
         <span class="badge badge-{{ w.webhook_type }}">{{ w.webhook_type }}</span>
         <strong>{{ w.league_name }}</strong>
-        <code>{{ w.webhook_url[:60] }}...</code>
+        <code>{{ w.masked_url }}</code>
+        <form method="post" class="remove-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="action" value="delete_webhook">
+          <input type="hidden" name="webhook_id" value="{{ w.id }}">
+          <button type="submit" class="btn-small">Remove</button>
+        </form>
       </li>
     {% endfor %}
   </ul>

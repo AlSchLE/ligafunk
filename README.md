@@ -61,8 +61,12 @@ siehe `.env.example`).
 |---|---|---|
 | `SECRET_KEY` | Produktion | Zufälliger Schlüssel zum Signieren der Session-Cookies |
 | `DATABASE_PATH` | Nein | Pfad zur SQLite-Datei (Render: `/tmp/sleeper_web.db`) |
+| `SESSION_LIFETIME_HOURS` | Nein | Team-Session-Lebensdauer (Standard: 24) |
+| `ADMIN_SESSION_HOURS` | Nein | Admin-Session-Lebensdauer (Standard: 8) |
 | `ADMIN_PASSWORD_HASH` | Ja (Produktion) | Werkzeug-Hash des Admin-Passworts (empfohlen) |
 | `ADMIN_PASSWORD` | Nur lokal | Klartext-Alternative für die Entwicklung |
+| `TRUSTED_HOSTS` | Nein | Kommagetrennte Host-Allowlist gegen Host-Header-Manipulation |
+| `FORCE_HTTPS` | Nein | `1` erzwingt HTTPS/HSTS/Secure-Cookies auch ohne `RENDER` |
 | `IMPRESSUM_NAME` | Ja (Impressum) | Name des Anbieters |
 | `IMPRESSUM_STREET` | Ja (Impressum) | Straße und Hausnummer |
 | `IMPRESSUM_CITY` | Ja (Impressum) | PLZ und Ort |
@@ -76,18 +80,23 @@ python -c "from werkzeug.security import generate_password_hash; print(generate_
 
 Ist weder `ADMIN_PASSWORD_HASH` noch `ADMIN_PASSWORD` gesetzt, ist der
 Admin-Login deaktiviert (HTTP 503). Es gibt keinen eingebauten Fallback.
+In Produktion (`RENDER` oder `FORCE_HTTPS=1`) wird ausschließlich
+`ADMIN_PASSWORD_HASH` akzeptiert; `ADMIN_PASSWORD` wird dort ignoriert.
 
 ## Admin-Panel
 
 1. Öffne http://localhost:5000/admin
 2. Erstelle eine Liga mit Name und Sleeper League ID
-3. Füge Teams mit Passwort hinzu
+3. Füge Teams mit Passwort hinzu (mindestens 10 Zeichen)
 4. (Optional) Webhooks für Slack/Discord/Telegram konfigurieren
+
+Im Admin-Panel lassen sich Team-Passwörter zurücksetzen (dabei werden alle
+aktiven Sessions des Teams sofort ungültig) und Webhooks wieder entfernen.
 
 ## Liga-URL
 
-Jede Liga erhält einen unguessbaren Code, z.B.:
-`http://localhost:5000/l/ABC123XY`
+Jede Liga erhält einen unguessbaren 12-stelligen Code, z.B.:
+`http://localhost:5000/l/ABC123XY9DEF`
 
 Diese URL kann geteilt werden — ohne Login kann man Recaps lesen.
 
@@ -96,6 +105,26 @@ Diese URL kann geteilt werden — ohne Login kann man Recaps lesen.
 1. Auf der Liga-Seite auf "Team Login" klicken
 2. Team auswählen und Passwort eingeben
 3. Zugriff auf privates Dashboard
+
+## Sicherheit
+
+- Team-Passwörter werden mit **scrypt** gespeichert. Alte SHA-256-Hashes werden
+  beim nächsten erfolgreichen Login automatisch aktualisiert.
+- Admin- und Team-Sessions schließen sich gegenseitig aus: eine Anmeldung in
+  der jeweils anderen Rolle löscht die vorherige Session serverseitig.
+- Login-Versuche sind auf 10 Fehlversuche pro 15 Minuten und IP begrenzt
+  (Admin und Team getrennt).
+- Admin-Sessions laufen nach 8 Stunden ab; Team-Sessions nach 24 Stunden.
+- Webhooks akzeptieren nur HTTPS-Endpunkte der offiziellen Anbieter
+  (`hooks.slack.com`, `discord.com`, `api.telegram.org`), ohne Redirects,
+  Zugangsdaten oder abweichende Ports. Das verhindert SSRF.
+- Backup-Downloads sind auf exakt die vom System erzeugten Dateinamen
+  beschränkt; private Seiten senden `Cache-Control: no-store`.
+- Produktion: HTTPS-Erzwingung, HSTS, `Secure`/`HttpOnly`/`SameSite=Lax`-Cookies
+  und das `__Host-`-Cookie-Präfix. Die CSP verbietet Inline-JavaScript und
+  Inline-Styles.
+- Backups enthalten Passwort-Hashes. Nur selbst erzeugte Backup-Dateien
+  importieren und die Download-Verzeichnisse nicht öffentlich freigeben.
 
 ## Distribution
 

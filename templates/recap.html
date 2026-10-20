@@ -30,10 +30,13 @@
   <h2>📤 Share this Recap</h2>
   <div class="share-buttons">
     <a href="{{ url_for('share_recap', league_code=league.league_code, recap_id=recap.id) }}" class="btn-share whatsapp">📱 WhatsApp</a>
-    <button type="button" data-copy="{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id, _external=True) }}" onclick="copyToClipboard(this.dataset.copy, this)" class="btn-share signal">📋 Copy Link</button>
-    <button type="button" data-copy="{{ recap.content }}" onclick="copyToClipboard(this.dataset.copy, this)" class="btn-share signal">📋 Copy Text</button>
+    <button type="button" data-copy="{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id, _external=True) }}" class="btn-share signal">📋 Copy Link</button>
+    <button type="button" data-copy="{{ recap.content }}" class="btn-share signal">📋 Copy Text</button>
     {% for hook in webhooks %}
-      <button type="button" onclick="postWebhook({{ recap.id }}, '{{ hook.webhook_type }}', this)" class="btn-share webhook">🚀 Post to {{ hook.webhook_type }}</button>
+      <button type="button"
+              data-webhook-endpoint="{{ url_for('webhook_post', league_code=league.league_code, recap_id=recap.id) }}"
+              data-webhook-type="{{ hook.webhook_type }}"
+              class="btn-share webhook">🚀 Post to {{ hook.webhook_type }}</button>
     {% endfor %}
   </div>
 </div>
@@ -41,26 +44,4 @@
 <div class="card">
   <a href="{{ url_for('league_public', league_code=league.league_code) }}" class="btn">← Back to League</a>
 </div>
-
-<script>
-const RECAP_CSRF_TOKEN = {{ csrf_token|tojson }};
-
-function postWebhook(recapId, type, btn) {
-  btn.textContent = "Posting...";
-  fetch(`/l/{{ league.league_code }}/webhook/${recapId}`, {
-    method: 'POST',
-    headers: {'X-CSRF-Token': RECAP_CSRF_TOKEN}
-  })
-    .then(r => r.json())
-    .then(data => {
-      const ok = data.results.every(r => r.status === 200);
-      btn.textContent = ok ? "✓ Posted!" : "⚠ Partial";
-      setTimeout(() => { btn.textContent = "🚀 Post to " + type; }, 3000);
-    })
-    .catch(() => {
-      btn.textContent = "✗ Failed";
-      setTimeout(() => { btn.textContent = "🚀 Post to " + type; }, 3000);
-    });
-}
-</script>
 {% endblock %}

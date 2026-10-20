@@ -4,12 +4,20 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn --timeout 180 app:app
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_PATH
         value: /tmp/sleeper_web.db
+      - key: SESSION_LIFETIME_HOURS
+        value: "24"
+      - key: ADMIN_SESSION_HOURS
+        value: "8"
+      # Optional: uncomment to reject requests with an unexpected Host header.
+      # Include every hostname that must serve the app.
+      # - key: TRUSTED_HOSTS
+      #   value: sleeper.schrader-leipzig.de,sleeper-web.onrender.com
       # Secrets below are NOT stored in the repository.
       # sync: false means the value must be entered in the Render dashboard.
       - key: ADMIN_PASSWORD_HASH

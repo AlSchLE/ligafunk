@@ -24,8 +24,11 @@ elif os.environ.get("RENDER"):
 else:
     DATABASE_PATH = str(BASE_DIR / "sleeper_web.db")
 
-SECRET_KEY = os.environ.get("SECRET_KEY", os.urandom(32).hex())
-SESSION_LIFETIME_HOURS = int(os.environ.get("SESSION_LIFETIME_HOURS", "24"))
+SECRET_KEY = os.environ.get("SECRET_KEY") or os.urandom(32).hex()
+try:
+    SESSION_LIFETIME_HOURS = max(1, int(os.environ.get("SESSION_LIFETIME_HOURS", "24")))
+except (TypeError, ValueError):
+    SESSION_LIFETIME_HOURS = 24
 
 # ---------------------------------------------------------------------------
 # Admin authentication
@@ -34,7 +37,7 @@ SESSION_LIFETIME_HOURS = int(os.environ.get("SESSION_LIFETIME_HOURS", "24"))
 # Fallback for local development only: ADMIN_PASSWORD (plaintext).
 # If neither is set, admin login is disabled.
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
-ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "")
+ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "").strip()
 ADMIN_ENABLED = bool(ADMIN_PASSWORD or ADMIN_PASSWORD_HASH)
 
 # ---------------------------------------------------------------------------
