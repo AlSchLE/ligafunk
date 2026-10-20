@@ -9,6 +9,29 @@ Fantasy-Sport-Plattform für Sleeper-Ligen mit Recaps, Team-Verwaltung und Multi
 - **Recaps**: Wöchentliche Recaps pro Liga, öffentlich einsehbar
 - **Distribution**: WhatsApp, Signal, Slack, Discord, Telegram, E-Mail, RSS
 - **Fantasy-Sport Theme**: Modernes, responsives Design
+- **Recap-Styles**: NFL-Reporter (EN) oder Football Bromance (DE), kombinierbar mit Saison-Themes
+
+## Recap-Styles & Themes
+
+Im Team-Dashboard lassen sich **Stil** und **Theme** frei kombinieren:
+
+| Stil | Sprache | Ton |
+|---|---|---|
+| `nfl_reporter` | Englisch | Broadcast-/ESPN-Register, Box Score, Film Session |
+| `bromance` | Deutsch | Lockerer Buddy-Trash-Talk, Memes, Bench-Roasts |
+
+| Theme | Wirkung |
+|---|---|
+| `none` | Normaler Recap ohne saisonale Einfärbung |
+| `christmas` | Bescherung, Wunschzettel, Christkind |
+| `halloween` | Geisterstunde, Horror-Lines, Süßes oder Saures |
+| `tight_end` | Tight-End-Spotlight, Streamer, TE-Notdienst |
+
+Ein Theme überschreibt Opener, Closer und Abschnittsüberschriften und streut
+eine thematische Zeile in die meisten Matchups. Jede Generierung nutzt ein
+frisches Zufalls-Deck: derselbe Spieltag liest sich beim nächsten Mal anders.
+Stil und Theme werden pro Recap gespeichert und auf der Recap-, Liga- und
+History-Seite als Badge angezeigt.
 
 ## Quick Start
 

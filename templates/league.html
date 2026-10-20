@@ -33,9 +33,13 @@
   {% if recaps %}
     <ul class="recap-list">
       {% for r in recaps[:10] %}
+        {% set s = recap_styles.get(r.style or 'nfl_reporter') %}
+        {% set t = recap_themes.get(r.theme or 'none') %}
         <li>
           <div class="recap-meta">
             <span class="week-badge">Week {{ r.week }}</span>
+            {% if s %}<span class="badge style-badge">{{ s.emoji }} {{ s.name }}</span>{% endif %}
+            {% if t and r.theme and r.theme != 'none' %}<span class="badge theme-badge">{{ t.emoji }} {{ t.name }}</span>{% endif %}
             <span class="recap-date">{{ r.created_at }}</span>
             {% if r.team_name %}
               <span class="recap-author">by {{ r.team_name }}</span>

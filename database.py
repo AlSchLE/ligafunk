@@ -37,6 +37,13 @@ def get_db() -> sqlite3.Connection:
     return conn
 
 
+def _ensure_column(cursor: sqlite3.Cursor, table: str, column: str, ddl: str) -> None:
+    """Add a column to an existing table if it is missing (lightweight migration)."""
+    existing = {row[1] for row in cursor.execute(f"PRAGMA table_info({table})")}
+    if column not in existing:
+        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+
+
 def init_db():
     """Initialize the database with all tables."""
     conn = get_db()
@@ -77,6 +84,10 @@ def init_db():
             FOREIGN KEY (created_by) REFERENCES teams (id)
         )
     """)
+
+    # Recap style / theme (added after the first release, so migrate in place).
+    _ensure_column(cursor, "recaps", "style", "TEXT DEFAULT 'nfl_reporter'")
+    _ensure_column(cursor, "recaps", "theme", "TEXT DEFAULT 'none'")
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sessions (

@@ -11,16 +11,19 @@ from typing import Any
 
 
 class Deck:
-    def __init__(self, lines: list[str]) -> None:
+    """Draw phrases without replacement so one recap never repeats a line."""
+
+    def __init__(self, lines: list[str], rng: random.Random | None = None) -> None:
         self._src = [x for x in lines if x]
         self._bag: list[str] = []
+        self._rng = rng or random
 
     def draw(self, **kwargs: Any) -> str:
         if not self._src:
             return ""
         if not self._bag:
             self._bag = self._src[:]
-            random.shuffle(self._bag)
+            self._rng.shuffle(self._bag)
         text = self._bag.pop()
         if kwargs:
             return text.format(**kwargs)

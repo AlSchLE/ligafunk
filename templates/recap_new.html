@@ -7,9 +7,27 @@
   <p class="tagline">{{ team.name }} — {{ league.name }}</p>
   <form method="post">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-    <div class="form-group">
-      <label>Week</label>
-      <input type="number" name="week" required min="1" max="25" placeholder="e.g. 5">
+    <div class="recap-form-grid">
+      <div class="form-group">
+        <label for="recap-week">Week</label>
+        <input id="recap-week" type="number" name="week" required min="1" max="22" placeholder="z.B. 5">
+      </div>
+      <div class="form-group">
+        <label for="recap-style">Stil</label>
+        <select id="recap-style" name="style">
+          {% for sid, meta in recap_styles.items() %}
+            <option value="{{ sid }}">{{ meta.emoji }} {{ meta.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="recap-theme">Theme</label>
+        <select id="recap-theme" name="theme">
+          {% for tid, meta in recap_themes.items() %}
+            <option value="{{ tid }}">{{ meta.emoji }} {{ meta.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
     <div class="form-group">
       <label>Recap Content</label>

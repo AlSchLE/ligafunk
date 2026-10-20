@@ -21,6 +21,14 @@ if _local_path not in sys.path:
 from recapcore.client import SleeperClient
 from recapcore.config import LEAGUES, MY_TEAMS
 from recapcore.narrate import league_recap
+from recapcore.options import (
+    DEFAULT_STYLE,
+    DEFAULT_THEME,
+    STYLE_META,
+    THEME_META,
+    normalize_style,
+    normalize_theme,
+)
 from recapcore.service import cmd_fetch, cmd_waivers, cmd_startsit
 from recapcore.startsit import (
     build_context,
@@ -42,8 +50,15 @@ from recapcore.league_format import starter_slots
 from recapcore.store import ensure_player_cache, load_snapshot, fetch_snapshot
 
 
-def generate_recap(league_id: str, week: int | None = None) -> str:
-    """Generate a weekly recap for a league."""
+def generate_recap(
+    league_id: str,
+    week: int | None = None,
+    style: str = DEFAULT_STYLE,
+    theme: str = DEFAULT_THEME,
+) -> str:
+    """Generate a weekly recap for a league in the selected voice and theme."""
+    style = normalize_style(style)
+    theme = normalize_theme(theme)
     snapshot = load_snapshot()
     if snapshot is None:
         snapshot = cmd_fetch(week=week)
@@ -77,7 +92,13 @@ def generate_recap(league_id: str, week: int | None = None) -> str:
             }
 
     recap_week = week or (block.get("week") or 1)
-    return league_recap(block, players, week=int(recap_week))
+    return league_recap(
+        block,
+        players,
+        week=int(recap_week),
+        style=style,
+        theme=theme,
+    )
 
 
 def generate_startsit(league_id: str, week: int | None = None) -> str:
