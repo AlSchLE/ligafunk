@@ -48,10 +48,10 @@ a:hover { text-decoration: underline; }
   z-index: 100;
 }
 
-.brand {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--accent);
+.nav-links {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
 .nav-links {

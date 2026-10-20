@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="league-header">
-  <h1>🏈 {{ league.name }}</h1>
+  <h1>{{ league.name }}</h1>
   <p class="tagline">League Code: <code>{{ league.league_code }}</code></p>
   <div class="league-actions">
     <a href="{{ url_for('league_history', league_code=league.league_code) }}" class="btn">📜 History</a>
