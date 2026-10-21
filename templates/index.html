@@ -16,6 +16,20 @@
   <div class="card">
     <h2>🔐 Team Login</h2>
     <p>Team owners log in with league code + team password for private waiver, trade, and lineup tools.</p>
+    {% if current_team %}
+      <a href="{{ url_for('team_dashboard', league_code=current_team.league_code) }}" class="btn btn-full">Go to Dashboard</a>
+    {% elif session.get('admin_authenticated') %}
+      <a href="{{ url_for('admin') }}" class="btn btn-full">Open Admin Panel</a>
+    {% else %}
+      <form method="get" action="{{ url_for('team_login_entry') }}">
+        <div class="form-group">
+          <label for="home-league-code">League Code or Link</label>
+          <input id="home-league-code" type="text" name="league_code" required maxlength="500"
+                 placeholder="e.g. A1B2C3D4E5F6" autocomplete="off" spellcheck="false">
+        </div>
+        <button type="submit" class="btn btn-full">Team Login</button>
+      </form>
+    {% endif %}
   </div>
   <div class="card">
     <h2>📤 Share Anywhere</h2>

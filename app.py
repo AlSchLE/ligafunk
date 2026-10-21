@@ -111,6 +111,10 @@ LOGIN_WINDOW_MINUTES = 15
 MAX_PASSWORD_LENGTH = 256
 # Cap stored recap text so a single account cannot fill the (ephemeral) disk.
 MAX_RECAP_LENGTH = 50_000
+# League codes are generated as 12 upper-case URL-safe characters, but older
+# imported leagues may use any 6-64 character code from this alphabet.
+_LEAGUE_CODE_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
+_LEAGUE_CODE_INPUT_MAX = 500
 
 if not os.environ.get("SECRET_KEY"):
     log.warning("SECRET_KEY is not set; sessions will be invalidated on restart. "
@@ -337,6 +341,52 @@ def login_required(f):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+def _extract_league_code(value) -> str:
+    """Extract a league code from a bare code or a pasted league link."""
+    if not isinstance(value, str):
+        return ""
+    raw = value.strip()
+    if not raw or len(raw) > _LEAGUE_CODE_INPUT_MAX:
+        return ""
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7f for ch in raw):
+        return ""
+    # Accept full links such as https://host/l/<code> and paths such as
+    # /l/<code>/login. Only the code is used, never the submitted URL.
+    if "/l/" in raw:
+        raw = raw.split("/l/", 1)[1]
+    raw = raw.split("?", 1)[0].split("#", 1)[0].strip("/").split("/", 1)[0]
+    return raw if _LEAGUE_CODE_RE.fullmatch(raw) else ""
+
+
+@app.route("/team-login")
+def team_login_entry():
+    """Send a league code or pasted league link to the team login page."""
+    code = _extract_league_code(request.args.get("league_code"))
+    if not code:
+        flash("Enter a valid league code or league link.")
+        return redirect(url_for("index"))
+
+    conn = get_db()
+    try:
+        league = conn.execute(
+            "SELECT league_code FROM leagues WHERE league_code = ?", (code,)
+        ).fetchone()
+        # Generated codes are upper-case; accept lower-case typing without
+        # breaking older imported codes that really are lower-case.
+        if not league and code != code.upper():
+            league = conn.execute(
+                "SELECT league_code FROM leagues WHERE league_code = ?",
+                (code.upper(),),
+            ).fetchone()
+    finally:
+        conn.close()
+
+    if not league:
+        flash("League not found. Check the code or link.")
+        return redirect(url_for("index"))
+    return redirect(url_for("login", league_code=league["league_code"]))
 
 
 @app.route("/impressum")
@@ -573,7 +623,6 @@ _BACKUP_SCHEMA = {
                "created_at", "style", "theme"),
     "webhooks": ("id", "league_id", "webhook_type", "webhook_url", "created_at"),
 }
-_LEAGUE_CODE_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 _LEGACY_HASH_RE = re.compile(r"^[0-9a-f]{16,128}\$[0-9a-f]{64}$")
 
 
