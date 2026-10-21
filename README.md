@@ -102,7 +102,8 @@ Diese URL kann geteilt werden — ohne Login kann man Recaps lesen.
 
 ## Team-Login
 
-1. Auf der Liga-Seite auf "Team Login" klicken
+1. Auf der Startseite den Liga-Code oder den kompletten Liga-Link eingeben
+   (alternativ auf der Liga-Seite auf "Team Login" klicken)
 2. Team auswählen und Passwort eingeben
 3. Zugriff auf privates Dashboard
 
