@@ -107,6 +107,33 @@ Diese URL kann geteilt werden — ohne Login kann man Recaps lesen.
 2. Team auswählen und Passwort eingeben
 3. Zugriff auf privates Dashboard
 
+## Start/Sit und Waivers: Datenbasis
+
+- **Liga-Snapshot:** Roster, Matchups und `last_scored_leg` werden höchstens
+  15 Minuten wiederverwendet. Bei einer anderen Woche oder älterem Snapshot
+  wird neu geladen.
+- **Spieler/Verletzungen:** Der Sleeper-Spielerkatalog wird für Empfehlungen
+  höchstens 3 Stunden gecacht.
+- **Vergangene Wochen:** Für alle abgeschlossenen Wochen (`1` bis
+  `last_scored_leg`) werden die Sleeper-Stats geladen und mit den
+  ligaspezifischen Scoring-Regeln verrechnet. Zusätzlich werden die Wochen
+  15–18 der Vorsaison für den Vergleich gegen den kommenden Gegner genutzt.
+- **Kommende Woche:** Sleeper-Projektionen (6 Stunden Cache),
+  NFL-Spielplan, Open-Meteo-Wetter (6 Stunden) und – falls verfügbar –
+  Vegas-Implied-Totals (3 Stunden).
+- **Form:** nach Wochen gewichteter Durchschnitt der Saisonleistung (spätere
+  Wochen zählen mehr); die letzte gespielte Woche wird mit den tatsächlichen
+  Matchup-Punkten überschrieben.
+- **Empfehlung:** 50 % Projektion, 25 % Form, 15 % Leistung gegen den kommenden
+  Gegner. Fehlende Quellen werden neu gewichtet. Danach folgen Multiplikatoren
+  für Gegnerstärke gegen die Position, Wetter, Rest/Travel, Verletzung/Practice
+  und Vegas. OUT/IR/Bye sind nicht startbar; die Aufstellung wird nach Slots
+  und Empfehlung optimiert.
+- **Waivers:** Derselbe Score für Roster und Free Agents, ergänzt um
+  Trending-Adds und Depth-Chart-Backups für verletzte/questionable Spieler.
+  Der schwächste passende Drop wird gesucht; FAAB-Gebote richten sich nach
+  Upgrade, Restbudget, Wochen bis zu den Playoffs und Handcuff-Bedarf.
+
 ## Sicherheit
 
 - Team-Passwörter werden mit **scrypt** gespeichert. Alte SHA-256-Hashes werden
