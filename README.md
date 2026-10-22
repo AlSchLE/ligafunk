@@ -60,7 +60,13 @@ siehe `.env.example`).
 | Variable | Pflicht | Beschreibung |
 |---|---|---|
 | `SECRET_KEY` | Produktion | Zufälliger Schlüssel zum Signieren der Session-Cookies |
-| `DATABASE_PATH` | Nein | Pfad zur SQLite-Datei (Render: `/tmp/sleeper_web.db`) |
+| `DATABASE_PATH` | Nein | Pfad zur SQLite-Datei (Render: `/tmp/sleeper_web.db`, wird per Litestream gesichert) |
+| `LITESTREAM_BUCKET` | Produktion | Privater S3-kompatibler Bucket für die SQLite-Replikation |
+| `LITESTREAM_ENDPOINT` | Produktion | S3-Endpoint, z. B. `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
+| `LITESTREAM_REGION` | Produktion | `auto` bei Cloudflare R2 |
+| `LITESTREAM_REPLICA_PATH` | Produktion | Objektpfad im Bucket, z. B. `ligafunk/sleeper_web.db` |
+| `LITESTREAM_ACCESS_KEY_ID` | Produktion | Zugangsschlüssel des Bucket-Tokens |
+| `LITESTREAM_SECRET_ACCESS_KEY` | Produktion | Geheimer Schlüssel des Bucket-Tokens |
 | `SESSION_LIFETIME_HOURS` | Nein | Team-Session-Lebensdauer (Standard: 24) |
 | `ADMIN_SESSION_HOURS` | Nein | Admin-Session-Lebensdauer (Standard: 8) |
 | `ADMIN_PASSWORD_HASH` | Ja (Produktion) | Werkzeug-Hash des Admin-Passworts (empfohlen) |
@@ -82,6 +88,53 @@ Ist weder `ADMIN_PASSWORD_HASH` noch `ADMIN_PASSWORD` gesetzt, ist der
 Admin-Login deaktiviert (HTTP 503). Es gibt keinen eingebauten Fallback.
 In Produktion (`RENDER` oder `FORCE_HTTPS=1`) wird ausschließlich
 `ADMIN_PASSWORD_HASH` akzeptiert; `ADMIN_PASSWORD` wird dort ignoriert.
+
+## Dauerhafte Datenhaltung auf Render Free
+
+Render Free hat kein persistentes Dateisystem. `/tmp/sleeper_web.db` und
+`backups/` werden bei jedem Deploy, Restart oder Spin-down gelöscht. Die App
+repliziert die SQLite-DB deshalb mit **Litestream** in ein privates,
+S3-kompatibles Bucket und stellt sie beim Start automatisch wieder her.
+
+### Einrichtung
+
+1. Privates Bucket bei Cloudflare R2 (oder Backblaze B2) anlegen.
+2. API-Token nur für dieses Bucket mit „Object Read & Write“ erzeugen.
+3. In Render diese Variablen setzen:
+   `LITESTREAM_BUCKET`, `LITESTREAM_ENDPOINT`, `LITESTREAM_REGION`,
+   `LITESTREAM_REPLICA_PATH`, `LITESTREAM_ACCESS_KEY_ID`,
+   `LITESTREAM_SECRET_ACCESS_KEY`.
+4. Deployen. Beim ersten Start ohne Replica legt die App eine leere DB an.
+5. Vor dem Umbau ein JSON-Backup im Admin-Panel herunterladen und nach dem
+   ersten Start importieren, damit die bisherigen Ligen erhalten bleiben.
+6. Danach einen Restart testen und prüfen, ob Ligen, Teams und Recaps bleiben.
+
+Der Build lädt Litestream v0.5.17 und prüft die SHA-256-Summe. Die
+Startsequenz bricht mit einer klaren Fehlermeldung ab, wenn eine
+`LITESTREAM_*`-Variable fehlt.
+
+### Verhalten
+
+- `restore-if-db-not-exists`: Litestream holt die DB nur zurück, wenn lokal
+  keine Datei existiert.
+- `sync-interval: 10s`: Bei einem harten Absturz können maximal ca. 10 Sekunden
+  Änderungen verloren gehen. Bei einem normalen Shutdown synchronisiert
+  Litestream vorher.
+- **Eine Instanz:** SQLite + Litestream nicht auf mehrere Render-Instanzen
+  skalieren. Für Multi-Instanz-Betrieb ist PostgreSQL die bessere Wahl.
+- `backups/` bleibt ein zusätzlicher manueller JSON-Export. Die primäre
+  Persistenz ist die Litestream-Replik.
+- `data/` ist nur ein Sleeper-Cache und wird bei Bedarf neu geladen.
+
+### Sicherheit
+
+- Bucket privat lassen; keine öffentliche URL aktivieren.
+- Token nur für diesen Bucket, keine Account-weiten Rechte.
+- Zugangsdaten ausschließlich als Render-Environment-Variablen.
+- Die DB enthält Passwort-Hashes und Webhook-URLs; Bucket und Token entsprechend
+  schützen.
+- Zusätzlich regelmäßig ein JSON-Backup herunterladen. Litestream schützt gegen
+  Server-Neustarts, nicht gegen logische Fehler oder versehentliches Löschen.
 
 ## Admin-Panel
 
@@ -173,6 +226,7 @@ Sleeper_Web/
 ├── app.py              # Flask-Anwendung
 ├── config.py           # Konfiguration
 ├── database.py         # SQLite-Datenbank
+├── litestream.yml      # SQLite-Replikation nach R2/B2
 ├── templates/          # HTML-Templates
 ├── static/            # CSS/JS
 ├── requirements.txt   # Python-Abhängigkeiten
