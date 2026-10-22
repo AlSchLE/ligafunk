@@ -11,6 +11,9 @@ admin_web.txt
 venv/
 backups/
 
+# Litestream binary is downloaded by the Render build command.
+bin/
+
 # Generated API snapshots and reports can contain league/owner data.
 data/
 logs/
