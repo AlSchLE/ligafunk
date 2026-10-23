@@ -2,45 +2,92 @@
 {% block title %}Dashboard — {{ team.name }}{% endblock %}
 
 {% block content %}
-<div class="league-header">
-  <h1>👋 Welcome, {{ team.owner_name }}</h1>
-  <p class="tagline">{{ team.name }} — {{ league.name }}</p>
-</div>
+<section class="page-head">
+  <div class="avatar avatar-xl avatar-0" aria-hidden="true">{{ team.name[:2]|upper }}</div>
+  <div class="page-head-copy">
+    <span class="eyebrow">Team dashboard</span>
+    <h1>{{ team.name }}</h1>
+    <p>{{ league.name }} · {{ team.owner_name }}</p>
+  </div>
+  <div class="page-head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('league_public', league_code=league.league_code) }}">View league page</a>
+  </div>
+</section>
 
-<div class="grid-4">
-  <div class="card dashboard-card">
-    <h2>📋 New Recap</h2>
-    <p>Create a manual recap or generate one automatically.</p>
-    <a href="{{ url_for('recap_new', league_code=league.league_code) }}" class="btn">+ New Recap</a>
+<div class="stat-strip">
+  <div class="stat">
+    <span>League</span>
+    <strong>{{ league.name }}</strong>
   </div>
-  <div class="card dashboard-card">
-    <h2>Start/Sit</h2>
-    <p>Get start/sit advice for your team.</p>
-    <form method="post" action="{{ url_for('startsit_advice', league_code=league.league_code) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-      <input type="number" name="week" placeholder="Week" min="1" max="22" class="week-input">
-      <button type="submit" class="btn full-width">Get Advice</button>
-    </form>
+  <div class="stat">
+    <span>Owner</span>
+    <strong>{{ team.owner_name }}</strong>
   </div>
-  <div class="card dashboard-card">
-    <h2>📋 Waivers</h2>
-    <p>Get waiver wire advice for your team.</p>
-    <form method="post" action="{{ url_for('waiver_advice', league_code=league.league_code) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-      <input type="number" name="week" placeholder="Week" min="1" max="22" class="week-input">
-      <button type="submit" class="btn full-width">Get Waivers</button>
-    </form>
-  </div>
-  <div class="card dashboard-card">
-    <h2>📡 RSS Feed</h2>
-    <p>Subscribe to your league's RSS feed.</p>
-    <a href="{{ url_for('league_rss', league_code=league.league_code) }}" class="btn">RSS</a>
+  <div class="stat">
+    <span>My recaps</span>
+    <strong>{{ recaps|length }}</strong>
   </div>
 </div>
 
-<div class="card">
-  <h2>⚡ Recap Generator</h2>
-  <p>Wähle Woche, Stimme und Theme. Jede Generierung ergibt einen neuen Text.</p>
+<div class="tool-grid">
+  <a class="tool-card tool-green" href="{{ url_for('recap_new', league_code=league.league_code) }}">
+    <span class="icon-tile" aria-hidden="true">📝</span>
+    <span class="tool-card-body">
+      <span class="feature-kicker">Create</span>
+      <h3>New recap</h3>
+      <p>Write a manual recap or let the generator do the heavy lifting.</p>
+    </span>
+    <span class="tool-card-arrow" aria-hidden="true">↗</span>
+  </a>
+
+  <form method="post" action="{{ url_for('startsit_advice', league_code=league.league_code) }}" class="tool-card tool-purple">
+    <span class="icon-tile" aria-hidden="true">⚡</span>
+    <span class="tool-card-body">
+      <span class="feature-kicker">Lineup</span>
+      <h3>Start/Sit</h3>
+      <p>Get advice for your team this week.</p>
+    </span>
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <div class="tool-form">
+      <input type="number" name="week" aria-label="Week" placeholder="Week" min="1" max="22" class="week-input" required>
+      <button type="submit" class="btn">Get advice</button>
+    </div>
+  </form>
+
+  <form method="post" action="{{ url_for('waiver_advice', league_code=league.league_code) }}" class="tool-card tool-orange">
+    <span class="icon-tile" aria-hidden="true">📈</span>
+    <span class="tool-card-body">
+      <span class="feature-kicker">Waivers</span>
+      <h3>Waiver wire</h3>
+      <p>Find adds, handcuffs and the weakest drop.</p>
+    </span>
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <div class="tool-form">
+      <input type="number" name="week" aria-label="Week" placeholder="Week" min="1" max="22" class="week-input" required>
+      <button type="submit" class="btn">Get waivers</button>
+    </div>
+  </form>
+
+  <a class="tool-card tool-blue" href="{{ url_for('league_rss', league_code=league.league_code) }}">
+    <span class="icon-tile" aria-hidden="true">📡</span>
+    <span class="tool-card-body">
+      <span class="feature-kicker">Subscribe</span>
+      <h3>RSS feed</h3>
+      <p>Follow your league's recaps in any reader.</p>
+    </span>
+    <span class="tool-card-arrow" aria-hidden="true">↗</span>
+  </a>
+</div>
+
+<section class="card generator-card">
+  <div class="card-head">
+    <span class="icon-tile" aria-hidden="true">🏆</span>
+    <div>
+      <h2>Recap generator</h2>
+      <p>Choose a week, style and theme. Every generation creates a new text.</p>
+    </div>
+  </div>
+
   <form method="post" action="{{ url_for('recap_generate', league_code=league.league_code) }}"
         id="recap-generator-form"
         data-recap-styles='{{ recap_styles|tojson }}'
@@ -49,10 +96,10 @@
     <div class="recap-form-grid">
       <div class="form-group">
         <label for="recap-week">Week</label>
-        <input id="recap-week" type="number" name="week" min="1" max="22" required placeholder="z.B. 7">
+        <input id="recap-week" type="number" name="week" min="1" max="22" required placeholder="e.g. 7">
       </div>
       <div class="form-group">
-        <label for="recap-style">Stil</label>
+        <label for="recap-style">Style</label>
         <select id="recap-style" name="style">
           {% for sid, meta in recap_styles.items() %}
             <option value="{{ sid }}" {% if sid == 'nfl_reporter' %}selected{% endif %}>{{ meta.emoji }} {{ meta.name }}</option>
@@ -67,28 +114,37 @@
           {% endfor %}
         </select>
       </div>
-      <div class="form-group recap-submit">
-        <button type="submit" class="btn">🏆 Recap generieren</button>
-      </div>
+    </div>
+    <div class="form-group recap-submit">
+      <button type="submit" class="btn">Generate recap</button>
     </div>
     <p class="hint" id="recap-hint"></p>
   </form>
-</div>
+</section>
 
 {% if recaps %}
-<div class="card">
-  <h2>📰 My Recent Recaps</h2>
-  <ul class="recap-list">
+<section class="card">
+  <div class="section-head compact">
+    <div>
+      <span class="eyebrow">Latest</span>
+      <h2>My recent recaps</h2>
+    </div>
+    <a href="{{ url_for('league_history', league_code=league.league_code) }}" class="text-link">All recaps <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="recap-stack">
     {% for r in recaps[:10] %}
-      <li>
-        <div class="recap-meta">
+      <a class="recap-row" href="{{ url_for('league_recap', league_code=league.league_code, recap_id=r.id) }}">
+        <span class="recap-row-main">
           <span class="week-badge">Week {{ r.week }}</span>
+          <span class="recap-title">View recap</span>
+        </span>
+        <span class="recap-row-side">
           <span class="recap-date">{{ r.created_at }}</span>
-        </div>
-        <a href="{{ url_for('league_recap', league_code=league.league_code, recap_id=r.id) }}" class="recap-title">View Recap</a>
-      </li>
+          <span aria-hidden="true">→</span>
+        </span>
+      </a>
     {% endfor %}
-  </ul>
-</div>
+  </div>
+</section>
 {% endif %}
 {% endblock %}

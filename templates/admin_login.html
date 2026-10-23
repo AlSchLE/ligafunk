@@ -2,11 +2,27 @@
 {% block title %}Admin Login — Ligafunk{% endblock %}
 
 {% block content %}
-<div class="login-container">
+<div class="auth-shell">
+  <div class="auth-visual">
+    <span class="eyebrow">Staff access</span>
+    <h1>Admin control room.</h1>
+    <p>Manage leagues, teams, backups and webhook integrations from one place.</p>
+    <div class="mini-list">
+      <span><span class="check" aria-hidden="true">✓</span> Password protected</span>
+      <span><span class="check" aria-hidden="true">✓</span> Strictly separated from team access</span>
+    </div>
+  </div>
+
   <div class="card login-card">
-    <h1>🔐 Admin Login</h1>
+    <div class="card-head">
+      <span class="icon-tile small" aria-hidden="true">⚙️</span>
+      <div>
+        <h2>Admin login</h2>
+        <p>Enter the admin password to continue.</p>
+      </div>
+    </div>
+
     {% if admin_enabled %}
-      <p class="tagline">Enter admin password to continue</p>
       {% if rate_limited %}
         <div class="flash">Too many attempts. Please wait 15 minutes and try again.</div>
       {% endif %}
@@ -14,8 +30,8 @@
         <input type="hidden" name="next" value="{{ next }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
-          <label>Password</label>
-          <input type="password" name="password" required maxlength="256"
+          <label for="admin-password">Password</label>
+          <input id="admin-password" type="password" name="password" required maxlength="256"
                  autocomplete="current-password" placeholder="Admin password" autofocus>
         </div>
         <button type="submit" class="btn btn-full">Login</button>

@@ -2,9 +2,12 @@
 {% block title %}404 — Not Found{% endblock %}
 
 {% block content %}
-<div class="hero">
-  <h1>404</h1>
-  <p class="tagline">Page not found</p>
-  <a href="{{ url_for('index') }}" class="btn">← Back to Home</a>
+<div class="login-container">
+  <div class="card login-card">
+    <span class="error-code" aria-hidden="true">404</span>
+    <h1>Page not found</h1>
+    <p class="tagline">That page is not on the depth chart.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-full">← Back to home</a>
+  </div>
 </div>
 {% endblock %}
