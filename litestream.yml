@@ -20,5 +20,7 @@ dbs:
       path: ${LITESTREAM_REPLICA_PATH}
       endpoint: ${LITESTREAM_ENDPOINT}
       region: ${LITESTREAM_REGION}
+      access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+      secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
       # Small enough for frequent changes, large enough for R2's free tier.
       sync-interval: 10s
