@@ -4,12 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: bash build.sh
-    startCommand: |
-      if [ -z "$DATABASE_PATH" ] || [ -z "$LITESTREAM_BUCKET" ] || [ -z "$LITESTREAM_ENDPOINT" ] || [ -z "$LITESTREAM_REGION" ] || [ -z "$LITESTREAM_REPLICA_PATH" ] || [ -z "$LITESTREAM_ACCESS_KEY_ID" ] || [ -z "$LITESTREAM_SECRET_ACCESS_KEY" ]; then
-        echo "ERROR: Litestream is not fully configured. Set all LITESTREAM_* variables in Render." >&2
-        exit 1
-      fi
-      ./bin/litestream replicate -config litestream.yml -exec "gunicorn --timeout 180 app:app"
+    startCommand: bash start.sh
     envVars:
       - key: SECRET_KEY
         generateValue: true
