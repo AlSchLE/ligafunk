@@ -12,6 +12,10 @@ required_vars=(
   LITESTREAM_SECRET_ACCESS_KEY
 )
 
+# Log only variable names, never values, so typos are visible in Render logs.
+echo "Environment keys matching LITESTREAM/R2/AWS:"
+env | cut -d= -f1 | grep -E '^(LITESTREAM|R2|AWS)' | sort || true
+
 for key in "${required_vars[@]}"; do
   if [ -z "${!key:-}" ]; then
     echo "ERROR: $key is not set in the Render environment." >&2
