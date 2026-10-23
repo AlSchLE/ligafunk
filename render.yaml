@@ -3,13 +3,7 @@ services:
     name: sleeper-web
     runtime: python
     plan: free
-    buildCommand: |
-      pip install -r requirements.txt
-      mkdir -p bin
-      curl -fsSL -o /tmp/litestream.tar.gz https://github.com/benbjohnson/litestream/releases/download/v0.5.17/litestream-0.5.17-linux-x86_64.tar.gz
-      echo "cfb371176d164437ae869f8351cfde49bd1804ae71c61923f75c9cba9c9c006d  /tmp/litestream.tar.gz" | sha256sum -c -
-      tar -xzf /tmp/litestream.tar.gz -C bin litestream
-      chmod +x bin/litestream
+    buildCommand: bash build.sh
     startCommand: |
       if [ -z "$DATABASE_PATH" ] || [ -z "$LITESTREAM_BUCKET" ] || [ -z "$LITESTREAM_ENDPOINT" ] || [ -z "$LITESTREAM_REGION" ] || [ -z "$LITESTREAM_REPLICA_PATH" ] || [ -z "$LITESTREAM_ACCESS_KEY_ID" ] || [ -z "$LITESTREAM_SECRET_ACCESS_KEY" ]; then
         echo "ERROR: Litestream is not fully configured. Set all LITESTREAM_* variables in Render." >&2
