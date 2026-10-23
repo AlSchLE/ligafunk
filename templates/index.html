@@ -1,48 +1,152 @@
 {% extends "base.html" %}
+{% block title %}Ligafunk — Fantasy league command center{% endblock %}
 
 {% block content %}
-<div class="hero">
-  <h1 id="sport-icon">🏆</h1>
-  <h2 id="sport-name" class="home-sport-name">Fantasy Sports</h2>
-  <p class="tagline" id="sport-tagline">Recap & Team Management Platform</p>
-</div>
-
-<div class="card-grid">
-  <div class="card">
-    <h2>📋 League Page</h2>
-    <p>Each league gets its own unguessable URL with recaps and history. No login needed to view.</p>
-    <a href="{{ url_for('admin') }}" class="btn">Manage Leagues</a>
+<section class="hero">
+  <div class="hero-copy">
+    <span class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Fantasy league command center</span>
+    <h1>Run your league.<br><span class="accent">Tell the story.</span></h1>
+    <p class="tagline" id="sport-tagline">Recap &amp; Team Management Platform</p>
+    <div class="hero-actions">
+      <a class="btn btn-large" href="#team-login">Log in to your team</a>
+      <a class="btn btn-ghost btn-large" href="{{ url_for('admin') }}">Admin panel</a>
+    </div>
+    <div class="trust-row">
+      <span class="trust-item"><span class="dot" aria-hidden="true"></span> Weekly recaps</span>
+      <span class="trust-item"><span class="dot" aria-hidden="true"></span> Start/Sit advice</span>
+      <span class="trust-item"><span class="dot" aria-hidden="true"></span> Waiver wire</span>
+    </div>
   </div>
-  <div class="card">
-    <h2>🔐 Team Login</h2>
-    <p>Team owners log in with league code + team password for private waiver, trade, and lineup tools.</p>
+
+  <div class="hero-panel">
+    <div class="panel-head">
+      <div class="sport-lockup">
+        <span class="sport-icon" id="sport-icon" aria-hidden="true">🏆</span>
+        <div>
+          <span class="panel-kicker">League pulse</span>
+          <strong id="sport-name">Fantasy Sports</strong>
+        </div>
+      </div>
+      <span class="live-pill"><span class="live-dot" aria-hidden="true"></span> Ready</span>
+    </div>
+
+    <div class="hero-recap">
+      <div class="hero-recap-top">
+        <span class="week-badge">Week 7</span>
+        <span class="muted">Recap preview</span>
+      </div>
+      <h3>The comeback that changed the season.</h3>
+      <p>Turn every matchup, waiver move and locker-room moment into a story your league actually wants to read.</p>
+      <div class="hero-recap-foot">
+        <span class="avatar-stack" aria-hidden="true">
+          <span class="mini-avatar avatar-0">AL</span>
+          <span class="mini-avatar avatar-1">MK</span>
+          <span class="mini-avatar avatar-2">JD</span>
+        </span>
+        <span class="muted">Made for your league</span>
+      </div>
+    </div>
+
+    <div class="hero-metrics">
+      <div><strong>3</strong><span>Tools in one hub</span></div>
+      <div><strong>10s</strong><span>Auto-save</span></div>
+      <div><strong>1</strong><span>Home for your league</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div>
+      <span class="eyebrow">Everything in one place</span>
+      <h2>Built for the way your league actually runs.</h2>
+    </div>
+    <p>Recaps, lineup calls and waiver moves — without jumping between five tabs.</p>
+  </div>
+
+  <div class="feature-grid">
+    <article class="feature-card feature-green">
+      <span class="icon-tile" aria-hidden="true">📋</span>
+      <span class="feature-kicker">League page</span>
+      <h3>Your league, with a pulse.</h3>
+      <p>Every league gets its own shareable home with recaps, history and team bragging rights.</p>
+      <a href="{{ url_for('admin') }}" class="text-link">Manage leagues <span aria-hidden="true">→</span></a>
+    </article>
+
+    <article class="feature-card feature-purple">
+      <span class="icon-tile" aria-hidden="true">⚡</span>
+      <span class="feature-kicker">Team tools</span>
+      <h3>Make the tough calls.</h3>
+      <p>Start/Sit advice, waiver targets and roster alerts built around your actual Sleeper team.</p>
+      <a href="#team-login" class="text-link">Open team tools <span aria-hidden="true">→</span></a>
+    </article>
+
+    <article class="feature-card feature-orange">
+      <span class="icon-tile" aria-hidden="true">📤</span>
+      <span class="feature-kicker">Share anywhere</span>
+      <h3>Send it where the league lives.</h3>
+      <p>Share recaps via WhatsApp, Signal, Slack, Discord, Telegram, e-mail or RSS.</p>
+      <a href="#team-login" class="text-link">Get started <span aria-hidden="true">→</span></a>
+    </article>
+  </div>
+</section>
+
+<section class="login-section" id="team-login">
+  <div class="login-copy">
+    <span class="eyebrow">Team access</span>
+    <h2>Your locker room is waiting.</h2>
+    <p>Log in with your league code and team password to generate recaps, get Start/Sit advice and work the waiver wire.</p>
+    <div class="mini-list">
+      <span><span class="check" aria-hidden="true">✓</span> Private team tools</span>
+      <span><span class="check" aria-hidden="true">✓</span> No cross-team access</span>
+      <span><span class="check" aria-hidden="true">✓</span> Share-ready recaps</span>
+    </div>
+  </div>
+
+  <div class="card login-card home-login-card">
+    <div class="card-head">
+      <span class="icon-tile small" aria-hidden="true">🔐</span>
+      <div>
+        <h3>Team login</h3>
+        <p>League code + team password</p>
+      </div>
+    </div>
+
     {% if current_team %}
-      <a href="{{ url_for('team_dashboard', league_code=current_team.league_code) }}" class="btn btn-full">Go to Dashboard</a>
+      <p class="hint">You are logged in as {{ current_team.owner_name }}.</p>
+      <a href="{{ url_for('team_dashboard', league_code=current_team.league_code) }}" class="btn btn-full">Go to dashboard</a>
     {% elif session.get('admin_authenticated') %}
-      <a href="{{ url_for('admin') }}" class="btn btn-full">Open Admin Panel</a>
+      <p class="hint">You are signed in as admin.</p>
+      <a href="{{ url_for('admin') }}" class="btn btn-full">Open admin panel</a>
     {% else %}
       <form method="get" action="{{ url_for('team_login_entry') }}">
         <div class="form-group">
-          <label for="home-league-code">League Code or Link</label>
+          <label for="home-league-code">League code or link</label>
           <input id="home-league-code" type="text" name="league_code" required maxlength="500"
                  placeholder="e.g. A1B2C3D4E5F6" autocomplete="off" spellcheck="false">
         </div>
-        <button type="submit" class="btn btn-full">Team Login</button>
+        <button type="submit" class="btn btn-full">Continue to team login</button>
       </form>
+      <p class="hint">Your league code is shared by your commissioner.</p>
     {% endif %}
   </div>
-  <div class="card">
-    <h2>📤 Share Anywhere</h2>
-    <p>Share recaps via WhatsApp, Signal, Slack, Discord, Telegram, E-Mail, or RSS.</p>
-  </div>
-</div>
+</section>
 
-<div class="card">
-  <h2>⚡ Quick Start</h2>
-  <p>Enter your Sleeper League ID to see the correct branding:</p>
-  <div class="form-group">
-    <input type="text" id="league-id-input" placeholder="e.g. 1387730345675210752" class="form-input" autocomplete="off">
-    <button type="button" data-action="update-branding" class="btn">Update Branding</button>
+<section class="section">
+  <div class="card brand-lab">
+    <div class="card-head">
+      <span class="icon-tile" aria-hidden="true">🎨</span>
+      <div>
+        <h3>League theme lab</h3>
+        <p>Preview the branding for a Sleeper league.</p>
+      </div>
+    </div>
+    <div class="brand-lab-row">
+      <input type="text" id="league-id-input" class="form-input"
+             placeholder="e.g. 1387730345675210752" autocomplete="off">
+      <button type="button" data-action="update-branding" class="btn">Update preview</button>
+    </div>
+    <p class="hint">This only changes the preview colors on this page.</p>
   </div>
-</div>
+</section>
 {% endblock %}
