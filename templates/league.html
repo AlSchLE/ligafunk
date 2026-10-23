@@ -2,62 +2,117 @@
 {% block title %}{{ league.name }} — Ligafunk{% endblock %}
 
 {% block content %}
-<div class="league-header">
-  <h1>{{ league.name }}</h1>
-  <p class="tagline">League Code: <code>{{ league.league_code }}</code></p>
-  <div class="league-actions">
-    <a href="{{ url_for('league_history', league_code=league.league_code) }}" class="btn">📜 History</a>
-    <a href="{{ url_for('league_rss', league_code=league.league_code) }}" class="btn">📡 RSS</a>
-    <a href="{{ url_for('login', league_code=league.league_code) }}" class="btn">🔐 Team Login</a>
+<section class="page-head">
+  <div class="league-emblem" aria-hidden="true">{{ league.name[:1]|upper }}</div>
+  <div class="page-head-copy">
+    <span class="eyebrow">League hub</span>
+    <h1>{{ league.name }}</h1>
+    <div class="meta-line">
+      <span class="code-pill">{{ league.league_code }}</span>
+      <span class="dot-sep">·</span>
+      <span>{{ teams|length }} team{% if teams|length != 1 %}s{% endif %}</span>
+      <span class="dot-sep">·</span>
+      <span>{{ recaps|length }} recap{% if recaps|length != 1 %}s{% endif %}</span>
+    </div>
+  </div>
+  <div class="page-head-actions">
+    <a href="{{ url_for('league_history', league_code=league.league_code) }}" class="btn btn-ghost">History</a>
+    <a href="{{ url_for('league_rss', league_code=league.league_code) }}" class="btn btn-ghost">RSS</a>
+    <a href="{{ url_for('login', league_code=league.league_code) }}" class="btn">Team login</a>
+  </div>
+</section>
+
+<div class="stat-strip">
+  <div class="stat">
+    <span>Teams</span>
+    <strong>{{ teams|length }}</strong>
+  </div>
+  <div class="stat">
+    <span>Recaps</span>
+    <strong>{{ recaps|length }}</strong>
+  </div>
+  <div class="stat">
+    <span>Integrations</span>
+    <strong>{{ webhooks|length if webhooks else 0 }}</strong>
   </div>
 </div>
 
-<div class="card">
-  <h2>📋 Teams</h2>
+<section class="card">
+  <div class="section-head compact">
+    <div>
+      <span class="eyebrow">The roster</span>
+      <h2>Teams</h2>
+    </div>
+  </div>
+
   {% if teams %}
-    <ul class="team-list">
+    <div class="team-grid">
       {% for t in teams %}
-        <li>
-          <span class="team-name">{{ t.name }}</span>
-          <span class="team-owner">{{ t.owner_name }}</span>
-        </li>
+        <div class="team-card">
+          <span class="avatar avatar-{{ loop.index0 % 5 }}" aria-hidden="true">{{ t.name[:2]|upper }}</span>
+          <div class="team-card-copy">
+            <strong>{{ t.name }}</strong>
+            <span>{{ t.owner_name }}</span>
+          </div>
+        </div>
       {% endfor %}
-    </ul>
+    </div>
   {% else %}
     <p class="empty">No teams registered yet.</p>
   {% endif %}
-</div>
+</section>
 
-<div class="card">
-  <h2>📰 Latest Recaps</h2>
+<section class="card">
+  <div class="section-head compact">
+    <div>
+      <span class="eyebrow">The story so far</span>
+      <h2>Latest recaps</h2>
+    </div>
+    {% if recaps %}
+      <a href="{{ url_for('league_history', league_code=league.league_code) }}" class="text-link">All recaps <span aria-hidden="true">→</span></a>
+    {% endif %}
+  </div>
+
   {% if recaps %}
-    <ul class="recap-list">
+    <div class="recap-grid">
       {% for r in recaps[:10] %}
         {% set s = recap_styles.get(r.style or 'nfl_reporter') %}
         {% set t = recap_themes.get(r.theme or 'none') %}
-        <li>
-          <div class="recap-meta">
+        <a class="recap-card" href="{{ url_for('league_recap', league_code=league.league_code, recap_id=r.id) }}">
+          <div class="recap-card-top">
             <span class="week-badge">Week {{ r.week }}</span>
-            {% if s %}<span class="badge style-badge">{{ s.emoji }} {{ s.name }}</span>{% endif %}
-            {% if t and r.theme and r.theme != 'none' %}<span class="badge theme-badge">{{ t.emoji }} {{ t.name }}</span>{% endif %}
             <span class="recap-date">{{ r.created_at }}</span>
-            {% if r.team_name %}
-              <span class="recap-author">by {{ r.team_name }}</span>
-            {% endif %}
           </div>
-          <a href="{{ url_for('league_recap', league_code=league.league_code, recap_id=r.id) }}" class="recap-title">View Recap</a>
-        </li>
+          <h3>Week {{ r.week }} Recap</h3>
+          <p>Open the full recap for the story, the standout performances and the bragging rights.</p>
+          <div class="recap-card-foot">
+            <div class="badge-row">
+              {% if s %}<span class="badge style-badge">{{ s.emoji }} {{ s.name }}</span>{% endif %}
+              {% if t and r.theme and r.theme != 'none' %}<span class="badge theme-badge">{{ t.emoji }} {{ t.name }}</span>{% endif %}
+            </div>
+            <span class="text-link">Read <span aria-hidden="true">→</span></span>
+          </div>
+          {% if r.team_name %}
+            <span class="recap-author">by {{ r.team_name }}</span>
+          {% endif %}
+        </a>
       {% endfor %}
-    </ul>
+    </div>
   {% else %}
     <p class="empty">No recaps yet.</p>
   {% endif %}
-</div>
+</section>
 
 {% if webhooks %}
-<div class="card">
-  <h2>📡 Integrations</h2>
-  <p>Connected: {{ webhooks|length }} webhook(s)</p>
-</div>
+<section class="card integration-card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">📡</span>
+    <div>
+      <h2>Integrations</h2>
+      <p>{{ webhooks|length }} webhook{% if webhooks|length != 1 %}s{% endif %} connected</p>
+    </div>
+  </div>
+  <p class="hint">Recap announcements can be posted automatically to the connected channels.</p>
+</section>
 {% endif %}
 {% endblock %}

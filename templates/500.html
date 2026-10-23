@@ -2,9 +2,12 @@
 {% block title %}500 — Server Error{% endblock %}
 
 {% block content %}
-<div class="hero">
-  <h1>500</h1>
-  <p class="tagline">Internal server error</p>
-  <a href="{{ url_for('index') }}" class="btn">← Back to Home</a>
+<div class="login-container">
+  <div class="card login-card">
+    <span class="error-code" aria-hidden="true">500</span>
+    <h1>Something broke</h1>
+    <p class="tagline">The server dropped the snap. Please try again.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-full">← Back to home</a>
+  </div>
 </div>
 {% endblock %}

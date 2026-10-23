@@ -2,31 +2,53 @@
 {% block title %}Login — {{ league.name }}{% endblock %}
 
 {% block content %}
-<div class="login-container">
+<div class="auth-shell">
+  <div class="auth-visual">
+    <span class="eyebrow">Team access</span>
+    <h1>{{ league.name }}</h1>
+    <p>Sign in to unlock your private team tools: recaps, Start/Sit advice and waiver targets.</p>
+    <div class="auth-code">
+      <span>League code</span>
+      <code>{{ league.league_code }}</code>
+    </div>
+    <div class="mini-list">
+      <span><span class="check" aria-hidden="true">✓</span> No cross-team access</span>
+      <span><span class="check" aria-hidden="true">✓</span> Session-based login</span>
+    </div>
+  </div>
+
   <div class="card login-card">
-    <h1>🔐 Team Login</h1>
-    <p class="tagline">{{ league.name }}</p>
+    <div class="card-head">
+      <span class="icon-tile small" aria-hidden="true">🔐</span>
+      <div>
+        <h2>Team login</h2>
+        <p>Select your team and enter the password.</p>
+      </div>
+    </div>
+
     {% if rate_limited %}
       <div class="flash">Too many attempts. Please wait 15 minutes and try again.</div>
     {% endif %}
+
     <form method="post">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
       <div class="form-group">
-        <label>Team</label>
-        <select name="team_id" required>
+        <label for="team-id">Team</label>
+        <select id="team-id" name="team_id" required>
           {% for t in teams %}
             <option value="{{ t.id }}">{{ t.name }} ({{ t.owner_name }})</option>
           {% endfor %}
         </select>
       </div>
       <div class="form-group">
-        <label>Password</label>
-        <input type="password" name="password" required maxlength="256"
+        <label for="team-password">Password</label>
+        <input id="team-password" type="password" name="password" required maxlength="256"
                autocomplete="current-password" placeholder="Team password">
       </div>
       <button type="submit" class="btn btn-full">Login</button>
     </form>
-    <p class="hint">League Code: <code>{{ league.league_code }}</code></p>
+
+    <p class="hint">League code: <code>{{ league.league_code }}</code></p>
   </div>
 </div>
 {% endblock %}
