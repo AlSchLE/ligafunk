@@ -1,0 +1,24 @@
+# Litestream replication for the ephemeral Render filesystem.
+#
+# The app writes SQLite to DATABASE_PATH (/tmp/sleeper_web.db on Render).
+# Litestream streams changes to a private S3-compatible bucket and restores
+# the database before Gunicorn starts when the local file is missing.
+#
+# Credentials are read from LITESTREAM_ACCESS_KEY_ID and
+# LITESTREAM_SECRET_ACCESS_KEY. Never put secrets in this file.
+
+snapshot:
+  interval: 24h
+  retention: 168h
+
+dbs:
+  - path: ${DATABASE_PATH}
+    restore-if-db-not-exists: true
+    replica:
+      type: s3
+      bucket: ${LITESTREAM_BUCKET}
+      path: ${LITESTREAM_REPLICA_PATH}
+      endpoint: ${LITESTREAM_ENDPOINT}
+      region: ${LITESTREAM_REGION}
+      # Small enough for frequent changes, large enough for R2's free tier.
+      sync-interval: 10s
