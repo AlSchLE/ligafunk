@@ -2,36 +2,40 @@
 {% block title %}History — {{ league.name }}{% endblock %}
 
 {% block content %}
-<div class="league-header">
-  <h1>📜 Recap History</h1>
-  <p class="tagline">{{ league.name }}</p>
-  <div class="league-actions">
-    <a href="{{ url_for('league_public', league_code=league.league_code) }}" class="btn">← Back</a>
+<section class="page-head">
+  <div class="avatar avatar-xl avatar-0" aria-hidden="true">{% if league.name %}{{ league.name[:1]|upper }}{% else %}L{% endif %}</div>
+  <div class="page-head-copy">
+    <span class="eyebrow">{{ league.name }}</span>
+    <h1>Recap history</h1>
+    <p>Every story your league has written so far.</p>
   </div>
-</div>
+  <div class="page-head-actions">
+    <a href="{{ url_for('league_public', league_code=league.league_code) }}" class="btn btn-ghost">← Back to league</a>
+  </div>
+</section>
 
-<div class="card">
+<section class="card">
   {% if recaps %}
-    <ul class="recap-list">
+    <div class="recap-stack">
       {% for r in recaps %}
         {% set s = recap_styles.get(r.style or 'nfl_reporter') %}
         {% set t = recap_themes.get(r.theme or 'none') %}
-        <li>
-          <div class="recap-meta">
+        <a class="recap-row" href="{{ url_for('league_recap', league_code=league.league_code, recap_id=r.id) }}">
+          <span class="recap-row-main">
             <span class="week-badge">Week {{ r.week }}</span>
             {% if s %}<span class="badge style-badge">{{ s.emoji }} {{ s.name }}</span>{% endif %}
             {% if t and r.theme and r.theme != 'none' %}<span class="badge theme-badge">{{ t.emoji }} {{ t.name }}</span>{% endif %}
+            {% if r.team_name %}<span class="recap-author">by {{ r.team_name }}</span>{% endif %}
+          </span>
+          <span class="recap-row-side">
             <span class="recap-date">{{ r.created_at }}</span>
-            {% if r.team_name %}
-              <span class="recap-author">by {{ r.team_name }}</span>
-            {% endif %}
-          </div>
-          <a href="{{ url_for('league_recap', league_code=league.league_code, recap_id=r.id) }}" class="recap-title">View Recap</a>
-        </li>
+            <span aria-hidden="true">→</span>
+          </span>
+        </a>
       {% endfor %}
-    </ul>
+    </div>
   {% else %}
     <p class="empty">No recaps yet.</p>
   {% endif %}
-</div>
+</section>
 {% endblock %}

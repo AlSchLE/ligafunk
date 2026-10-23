@@ -2,29 +2,33 @@
 {% block title %}Share Recap — {{ league.name }}{% endblock %}
 
 {% block content %}
-<div class="card">
-  <h1>📤 Share Recap</h1>
-  <p class="tagline">{{ league.name }} — Week {{ recap.week }}</p>
+<header class="article-head">
+  <a class="back-link" href="{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id) }}">← Back to recap</a>
+  <span class="eyebrow">{{ league.name }} · Week {{ recap.week }}</span>
+  <h1>Share recap</h1>
+  <p class="article-subtitle">Pick a channel and send the story.</p>
+</header>
 
+<section class="card">
   <div class="share-options">
     <a href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer" class="btn-share whatsapp">
-      <span class="share-icon">📱</span>
+      <span class="share-icon" aria-hidden="true">📱</span>
       <span>WhatsApp</span>
     </a>
 
     <button type="button" data-copy="{{ recap_text }}" class="btn-share signal">
-      <span class="share-icon">📋</span>
+      <span class="share-icon" aria-hidden="true">📋</span>
       <span>Copy for Signal</span>
     </button>
 
     <button type="button" data-copy="{{ recap_url }}" class="btn-share link">
-      <span class="share-icon">🔗</span>
-      <span>Copy Link</span>
+      <span class="share-icon" aria-hidden="true">🔗</span>
+      <span>Copy link</span>
     </button>
 
     <button type="button" data-copy="{{ recap.content }}" class="btn-share text">
-      <span class="share-icon">📄</span>
-      <span>Copy Text</span>
+      <span class="share-icon" aria-hidden="true">📄</span>
+      <span>Copy text</span>
     </button>
 
     {% for hook in webhooks %}
@@ -32,23 +36,25 @@
               data-webhook-endpoint="{{ url_for('webhook_post', league_code=league.league_code, recap_id=recap.id) }}"
               data-webhook-type="{{ hook.webhook_type }}"
               class="btn-share webhook">
-        <span class="share-icon">🚀</span>
+        <span class="share-icon" aria-hidden="true">🚀</span>
         <span>Post to {{ hook.webhook_type|capitalize }}</span>
       </button>
     {% endfor %}
 
     <a href="mailto:?subject={{ (league.name ~ ' — Week ' ~ recap.week ~ ' Recap')|urlencode }}&body={{ recap_text|urlencode }}" class="btn-share email">
-      <span class="share-icon">📧</span>
+      <span class="share-icon" aria-hidden="true">📧</span>
       <span>E-Mail</span>
     </a>
   </div>
 
-  <div class="card share-card">
+  <div class="share-card">
     <h3>Recap URL</h3>
     <code class="recap-url">{{ recap_url }}</code>
-    <button type="button" data-copy="{{ recap_url }}" class="btn-small copy-inline">📋 Copy</button>
+    <button type="button" data-copy="{{ recap_url }}" class="btn btn-small copy-inline">📋 Copy</button>
   </div>
 
-  <a href="{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id) }}" class="btn">← Back to Recap</a>
-</div>
+  <div class="card-actions">
+    <a href="{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id) }}" class="btn btn-ghost">← Back to recap</a>
+  </div>
+</section>
 {% endblock %}

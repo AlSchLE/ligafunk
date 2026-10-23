@@ -79,12 +79,12 @@
   }
 
   const SPORT_BRANDS = {
-    generic: { name: "Fantasy Sports", icon: "🏆", primary: "#1a472a", accent: "#c9a227", tagline: "Recap & Team Management Platform" },
-    soccer: { name: "Soccer", icon: "⚽", primary: "#006400", accent: "#ffffff", tagline: "Fantasy Soccer League" },
-    football: { name: "Football", icon: "🏈", primary: "#1a472a", accent: "#c9a227", tagline: "Fantasy Football League" },
-    baseball: { name: "Baseball", icon: "⚾", primary: "#003087", accent: "#ff0000", tagline: "Fantasy Baseball League" },
-    basketball: { name: "Basketball", icon: "🏀", primary: "#ff6600", accent: "#000000", tagline: "Fantasy Basketball League" },
-    hockey: { name: "Hockey", icon: "🏒", primary: "#000080", accent: "#ff0000", tagline: "Fantasy Hockey League" },
+    generic: { name: "Fantasy Sports", icon: "🏆", primary: "#00e681", light: "#5cffb0", dark: "#00b368", accent: "#5cffb0", tagline: "Recap & Team Management Platform" },
+    soccer: { name: "Soccer", icon: "⚽", primary: "#00e681", light: "#5cffb0", dark: "#00b368", accent: "#5cffb0", tagline: "Fantasy Soccer League" },
+    football: { name: "Football", icon: "🏈", primary: "#00c97a", light: "#5cffb0", dark: "#009e5f", accent: "#ffd166", tagline: "Fantasy Football League" },
+    baseball: { name: "Baseball", icon: "⚾", primary: "#4ea8ff", light: "#a8d8ff", dark: "#267fcc", accent: "#ff6fae", tagline: "Fantasy Baseball League" },
+    basketball: { name: "Basketball", icon: "🏀", primary: "#ff8a4c", light: "#ffc09e", dark: "#d9652b", accent: "#ffd166", tagline: "Fantasy Basketball League" },
+    hockey: { name: "Hockey", icon: "🏒", primary: "#5ab0ff", light: "#b9dcff", dark: "#2c82c9", accent: "#f6f8fb", tagline: "Fantasy Hockey League" },
   };
 
   const LEAGUE_MAP = {
@@ -105,7 +105,10 @@
     name.textContent = brand.name;
     tagline.textContent = brand.tagline;
     document.documentElement.style.setProperty("--primary", brand.primary);
+    document.documentElement.style.setProperty("--primary-light", brand.light);
+    document.documentElement.style.setProperty("--primary-dark", brand.dark);
     document.documentElement.style.setProperty("--accent", brand.accent);
+    document.documentElement.style.setProperty("--accent-light", brand.light);
   }
 
   function initRecapHints() {

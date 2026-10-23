@@ -4,10 +4,13 @@
 {% block content %}
 {% set style_meta = recap_styles.get(recap.style or 'nfl_reporter') %}
 {% set theme_meta = recap_themes.get(recap.theme or 'none') %}
-<div class="recap-header">
-  <h1>📋 Week {{ recap.week }} Recap</h1>
-  <p class="tagline">{{ league.name }}</p>
-  <div class="recap-meta">
+
+<header class="article-head">
+  <a class="back-link" href="{{ url_for('league_public', league_code=league.league_code) }}">← Back to {{ league.name }}</a>
+  <span class="eyebrow">Week {{ recap.week }} · {{ league.name }}</span>
+  <h1>Week {{ recap.week }} Recap</h1>
+  <p class="article-subtitle">The story, the swings and the bragging rights.</p>
+  <div class="article-meta">
     <span class="week-badge">Week {{ recap.week }}</span>
     {% if style_meta %}
       <span class="badge style-badge">{{ style_meta.emoji }} {{ style_meta.name }}</span>
@@ -20,18 +23,24 @@
       <span class="recap-author">by {{ recap.team_name }}</span>
     {% endif %}
   </div>
-</div>
+</header>
 
-<div class="card">
+<article class="card recap-article">
   <div class="recap-content">{{ recap.content }}</div>
-</div>
+</article>
 
-<div class="share-section">
-  <h2>📤 Share this Recap</h2>
+<section class="card share-panel">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">📤</span>
+    <div>
+      <h2>Share this recap</h2>
+      <p>Send it straight to the group chat.</p>
+    </div>
+  </div>
   <div class="share-buttons">
     <a href="{{ url_for('share_recap', league_code=league.league_code, recap_id=recap.id) }}" class="btn-share whatsapp">📱 WhatsApp</a>
-    <button type="button" data-copy="{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id, _external=True) }}" class="btn-share signal">📋 Copy Link</button>
-    <button type="button" data-copy="{{ recap.content }}" class="btn-share signal">📋 Copy Text</button>
+    <button type="button" data-copy="{{ url_for('league_recap', league_code=league.league_code, recap_id=recap.id, _external=True) }}" class="btn-share signal">📋 Copy link</button>
+    <button type="button" data-copy="{{ recap.content }}" class="btn-share signal">📋 Copy text</button>
     {% for hook in webhooks %}
       <button type="button"
               data-webhook-endpoint="{{ url_for('webhook_post', league_code=league.league_code, recap_id=recap.id) }}"
@@ -39,9 +48,9 @@
               class="btn-share webhook">🚀 Post to {{ hook.webhook_type }}</button>
     {% endfor %}
   </div>
-</div>
+</section>
 
-<div class="card">
-  <a href="{{ url_for('league_public', league_code=league.league_code) }}" class="btn">← Back to League</a>
+<div class="share-section">
+  <a href="{{ url_for('league_public', league_code=league.league_code) }}" class="btn btn-ghost">← Back to league</a>
 </div>
 {% endblock %}

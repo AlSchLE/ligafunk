@@ -283,6 +283,11 @@ def admin_required(f):
     return decorated_function
 
 
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("404.html"), 404
+
+
 @app.errorhandler(500)
 def internal_error(e):
     log.error("Internal error: %s", e)

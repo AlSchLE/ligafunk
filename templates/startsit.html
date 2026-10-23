@@ -2,24 +2,34 @@
 {% block title %}Start/Sit — {{ team.name }}{% endblock %}
 
 {% block content %}
-<div class="league-header">
-  <h1>Start/Sit Advisor</h1>
-  <p class="tagline">{{ team.name }} — {{ league.name }} — Week {{ week }}</p>
-  <div class="league-actions">
-    <a href="{{ url_for('team_dashboard', league_code=league.league_code) }}" class="btn">← Back to Dashboard</a>
+<section class="page-head">
+  <div class="avatar avatar-xl avatar-1" aria-hidden="true">{{ team.name[:2]|upper }}</div>
+  <div class="page-head-copy">
+    <span class="eyebrow">Week {{ week }} · Lineup call</span>
+    <h1>Start/Sit advisor</h1>
+    <p>{{ team.name }} · {{ league.name }}</p>
   </div>
-</div>
+  <div class="page-head-actions">
+    <a href="{{ url_for('team_dashboard', league_code=league.league_code) }}" class="btn btn-ghost">← Back to dashboard</a>
+  </div>
+</section>
 
-<div class="card">
+<article class="card recap-article">
   <div class="recap-content">{{ content }}</div>
-</div>
+</article>
 
-<div class="share-section">
-  <h2>📤 Share</h2>
+<section class="card share-panel">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">📤</span>
+    <div>
+      <h2>Share this advice</h2>
+      <p>Send the lineup call to your team chat.</p>
+    </div>
+  </div>
   <div class="share-buttons">
     <a href="https://wa.me/?text={{ content[:500] | urlencode }}" target="_blank" rel="noopener noreferrer" class="btn-share whatsapp">📱 WhatsApp</a>
     <button type="button" data-copy="{{ content }}" class="btn-share signal">📋 Copy</button>
     <a href="mailto:?subject={{ (league.name ~ ' — Start/Sit Week ' ~ week)|urlencode }}&body={{ content | urlencode }}" class="btn-share email">📧 E-Mail</a>
   </div>
-</div>
+</section>
 {% endblock %}

@@ -4,30 +4,61 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token }}">
+  <meta name="theme-color" content="#080b10">
   <title>{% block title %}Ligafunk{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2300e681'/><text x='50' y='68' text-anchor='middle' font-family='Arial,sans-serif' font-size='44' font-weight='900' fill='%2304110b'>LF</text></svg>">
 </head>
 <body>
-  <nav class="navbar">
-    <div class="nav-links">
-      {% if current_team %}
-        <a href="{{ url_for('team_dashboard', league_code=current_team.league_code) }}">Dashboard</a>
-        <form method="post" action="{{ url_for('logout', league_code=current_team.league_code) }}" class="logout-form">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-          <button type="submit" class="link-button">Logout</button>
-        </form>
-      {% elif session.get('admin_authenticated') %}
-        <a href="{{ url_for('admin') }}">Admin</a>
-        <form method="post" action="{{ url_for('admin_logout') }}" class="logout-form">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-          <button type="submit" class="link-button">Logout</button>
-        </form>
-      {% else %}
-        <a href="{{ url_for('admin') }}">Admin</a>
-      {% endif %}
+  <div class="site-glow site-glow-one" aria-hidden="true"></div>
+  <div class="site-glow site-glow-two" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ url_for('index') }}" aria-label="Ligafunk home">
+        <span class="brand-mark" aria-hidden="true">LF</span>
+        <span class="brand-word">LIGA<span>FUNK</span></span>
+      </a>
+
+      <nav class="nav-pill" aria-label="Main navigation">
+        <a class="nav-link {% if request.endpoint == 'index' %}is-active{% endif %}"
+           href="{{ url_for('index') }}">Home</a>
+        {% if current_team %}
+          <a class="nav-link {% if request.endpoint in ('league_public', 'league_history', 'league_recap') %}is-active{% endif %}"
+             href="{{ url_for('league_public', league_code=current_team.league_code) }}">League</a>
+          <a class="nav-link {% if request.endpoint == 'team_dashboard' %}is-active{% endif %}"
+             href="{{ url_for('team_dashboard', league_code=current_team.league_code) }}">Dashboard</a>
+        {% elif session.get('admin_authenticated') %}
+          <a class="nav-link {% if request.endpoint == 'admin' %}is-active{% endif %}"
+             href="{{ url_for('admin') }}">Admin</a>
+        {% endif %}
+      </nav>
+
+      <div class="topbar-actions">
+        {% if current_team %}
+          <a class="account-chip" href="{{ url_for('team_dashboard', league_code=current_team.league_code) }}">
+            <span class="mini-avatar" aria-hidden="true">{{ current_team.name[:2]|upper }}</span>
+            <span class="account-name">{{ current_team.owner_name }}</span>
+          </a>
+          <form method="post" action="{{ url_for('logout', league_code=current_team.league_code) }}" class="logout-form">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-ghost btn-small">Log out</button>
+          </form>
+        {% elif session.get('admin_authenticated') %}
+          <a class="account-chip" href="{{ url_for('admin') }}">
+            <span class="mini-avatar admin" aria-hidden="true">AD</span>
+            <span class="account-name">Admin</span>
+          </a>
+          <form method="post" action="{{ url_for('admin_logout') }}" class="logout-form">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-ghost btn-small">Log out</button>
+          </form>
+        {% else %}
+          <a class="btn btn-ghost btn-small" href="{{ url_for('admin') }}">Admin</a>
+        {% endif %}
+      </div>
     </div>
-  </nav>
+  </header>
 
   <main class="container">
     {% with msgs = get_flashed_messages() %}
@@ -42,8 +73,56 @@
   </main>
 
   <footer class="footer">
-    <p>Ligafunk · <a href="{{ url_for('impressum') }}">Impressum</a></p>
+    <div class="footer-inner">
+      <span class="footer-brand">LIGAFUNK</span>
+      <span class="dot-sep">·</span>
+      <span>Fantasy league storytelling</span>
+      <a href="{{ url_for('impressum') }}">Impressum</a>
+    </div>
   </footer>
+
+  <nav class="mobile-dock" aria-label="Mobile navigation">
+    <a class="dock-item {% if request.endpoint == 'index' %}is-active{% endif %}" href="{{ url_for('index') }}">
+      <span class="dock-icon" aria-hidden="true">⌂</span>
+      <span>Home</span>
+    </a>
+    {% if current_team %}
+      <a class="dock-item {% if request.endpoint in ('league_public', 'league_history', 'league_recap') %}is-active{% endif %}"
+         href="{{ url_for('league_public', league_code=current_team.league_code) }}">
+        <span class="dock-icon" aria-hidden="true">◫</span>
+        <span>League</span>
+      </a>
+      <a class="dock-item {% if request.endpoint == 'team_dashboard' %}is-active{% endif %}"
+         href="{{ url_for('team_dashboard', league_code=current_team.league_code) }}">
+        <span class="dock-icon" aria-hidden="true">◉</span>
+        <span>Dashboard</span>
+      </a>
+      <form method="post" action="{{ url_for('logout', league_code=current_team.league_code) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="dock-item">
+          <span class="dock-icon" aria-hidden="true">↩</span>
+          <span>Log out</span>
+        </button>
+      </form>
+    {% elif session.get('admin_authenticated') %}
+      <a class="dock-item {% if request.endpoint == 'admin' %}is-active{% endif %}" href="{{ url_for('admin') }}">
+        <span class="dock-icon" aria-hidden="true">⚙</span>
+        <span>Admin</span>
+      </a>
+      <form method="post" action="{{ url_for('admin_logout') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="dock-item">
+          <span class="dock-icon" aria-hidden="true">↩</span>
+          <span>Log out</span>
+        </button>
+      </form>
+    {% else %}
+      <a class="dock-item" href="{{ url_for('admin') }}">
+        <span class="dock-icon" aria-hidden="true">⚙</span>
+        <span>Admin</span>
+      </a>
+    {% endif %}
+  </nav>
 
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   {% block scripts %}{% endblock %}
