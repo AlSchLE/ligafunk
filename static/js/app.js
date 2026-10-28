@@ -5,6 +5,61 @@
 (function () {
   "use strict";
 
+  const THEME_KEY = "ligafunk-theme";
+  const THEME_COLORS = { dark: "#080b10", light: "#f2f7f2" };
+
+  function currentTheme() {
+    return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  }
+
+  function applyTheme(theme, persist) {
+    const next = theme === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+
+    if (persist) {
+      try {
+        window.localStorage.setItem(THEME_KEY, next);
+      } catch (err) {
+        // Private mode or blocked storage: the theme still applies for this page.
+      }
+    }
+
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute("content", THEME_COLORS[next]);
+    }
+
+    document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+      const nextLabel = next === "dark" ? "Light" : "Dark";
+      const label = button.querySelector(".theme-toggle-label");
+      if (label) {
+        label.textContent = nextLabel;
+      }
+      button.setAttribute("aria-label", "Switch to " + nextLabel.toLowerCase() + " mode");
+      button.setAttribute("title", "Switch to " + nextLabel.toLowerCase() + " mode");
+    });
+
+    // The brand lab writes inline colour variables. Keep those dark-theme
+    // colours from overriding the readable light palette.
+    if (next === "light") {
+      ["--primary", "--primary-light", "--primary-dark", "--accent", "--accent-light"].forEach((property) => {
+        document.documentElement.style.removeProperty(property);
+      });
+    } else {
+      updateBranding();
+    }
+  }
+
+  function initThemeToggle() {
+    applyTheme(currentTheme(), false);
+  }
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === THEME_KEY) {
+      applyTheme(event.newValue === "light" ? "light" : "dark", false);
+    }
+  });
+
   function copyToClipboard(text, btn) {
     const done = () => {
       const original = btn.textContent;
@@ -104,11 +159,14 @@
     icon.textContent = brand.icon;
     name.textContent = brand.name;
     tagline.textContent = brand.tagline;
-    document.documentElement.style.setProperty("--primary", brand.primary);
-    document.documentElement.style.setProperty("--primary-light", brand.light);
-    document.documentElement.style.setProperty("--primary-dark", brand.dark);
-    document.documentElement.style.setProperty("--accent", brand.accent);
-    document.documentElement.style.setProperty("--accent-light", brand.light);
+
+    if (document.documentElement.getAttribute("data-theme") !== "light") {
+      document.documentElement.style.setProperty("--primary", brand.primary);
+      document.documentElement.style.setProperty("--primary-light", brand.light);
+      document.documentElement.style.setProperty("--primary-dark", brand.dark);
+      document.documentElement.style.setProperty("--accent", brand.accent);
+      document.documentElement.style.setProperty("--accent-light", brand.light);
+    }
   }
 
   function initRecapHints() {
@@ -154,6 +212,7 @@
   }
 
   function init() {
+    initThemeToggle();
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", initRecapHints);
     } else {
@@ -164,6 +223,12 @@
   document.addEventListener("click", (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) {
+      return;
+    }
+
+    const themeButton = target.closest("[data-theme-toggle]");
+    if (themeButton) {
+      applyTheme(currentTheme() === "dark" ? "light" : "dark", true);
       return;
     }
 

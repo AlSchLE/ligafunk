@@ -1,11 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token }}">
   <meta name="theme-color" content="#080b10">
   <title>{% block title %}Ligafunk{% endblock %}</title>
+  <script src="{{ url_for('static', filename='js/theme-init.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2300e681'/><text x='50' y='68' text-anchor='middle' font-family='Arial,sans-serif' font-size='44' font-weight='900' fill='%2304110b'>LF</text></svg>">
 </head>
@@ -35,6 +36,13 @@
       </nav>
 
       <div class="topbar-actions">
+        <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch to light mode" title="Switch to light mode">
+          <span class="theme-toggle-icon" aria-hidden="true">
+            <span class="theme-icon theme-icon-sun">☀</span>
+            <span class="theme-icon theme-icon-moon">☾</span>
+          </span>
+          <span class="theme-toggle-label">Light</span>
+        </button>
         {% if current_team %}
           <a class="account-chip" href="{{ url_for('team_dashboard', league_code=current_team.league_code) }}">
             <span class="mini-avatar" aria-hidden="true">{{ current_team.name[:2]|upper }}</span>
