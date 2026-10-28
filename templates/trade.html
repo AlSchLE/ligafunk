@@ -172,6 +172,9 @@
         <p>Built from weak or injured starting spots and partner surpluses.</p>
       </div>
     </div>
+    <p class="hint trade-metric-note">
+      <strong>How to read this:</strong> Value lines are mirrored — the partner's gain is exactly the negative of yours, because both sides use the same player values and picks are not valued. Fit is a raw point score, not a percentage; the first number is your fit, the second the partner's. Hover or focus the info icons in each proposal for details.
+    </p>
     {% if result.proposals %}
       <div class="proposal-list">
         {% for p in result.proposals %}
@@ -201,9 +204,28 @@
               </div>
             </div>
             <div class="proposal-numbers">
-              <span>Your value <strong class="{{ 'delta-positive' if p.my_gain >= 0 else 'delta-negative' }}">{{ '%+.1f'|format(p.my_gain) }}</strong></span>
-              <span>Partner value <strong class="{{ 'delta-positive' if p.their_gain >= 0 else 'delta-negative' }}">{{ '%+.1f'|format(p.their_gain) }}</strong></span>
-              <span>Fit {{ '%.1f'|format(p.my_fit) }} / {{ '%.1f'|format(p.their_fit) }}</span>
+              <span class="proposal-metric">
+                <span class="proposal-metric-label">
+                  Your value gain
+                  <span class="info-tip" tabindex="0" role="note" data-tip="Value of the players you receive minus the value of the players you send. Draft picks are shown but not valued." aria-label="Your value gain: value received minus value sent. Picks are not valued.">i</span>
+                </span>
+                <strong class="{{ 'delta-positive' if p.my_gain >= 0 else 'delta-negative' }}">{{ '%+.1f'|format(p.my_gain) }}</strong>
+              </span>
+              <span class="proposal-metric">
+                <span class="proposal-metric-label">
+                  Partner value (mirror)
+                  <span class="info-tip" tabindex="0" role="note" data-tip="Exactly the negative of your gain: partner gain = -your gain. Gap suggestions only keep a positive gain for you, so this line is always negative. It is not an independent valuation of the partner's side." aria-label="Partner value is the exact mirror of your gain and is always negative in gap suggestions.">i</span>
+                </span>
+                <strong class="{{ 'delta-positive' if p.their_gain >= 0 else 'delta-negative' }}">{{ '%+.1f'|format(p.their_gain) }}</strong>
+              </span>
+              <span class="proposal-metric">
+                <span class="proposal-metric-label">
+                  Fit (you / partner)
+                  <span class="info-tip info-tip-end" tabindex="0" role="note" data-tip="Raw need/surplus points, not a percentage and not normalised to 0-100. Your fit: needs filled by incoming players plus positive surplus at positions you send from. Partner fit: the same from their roster. Higher is better." aria-label="Fit is a raw need and surplus point score, not a percentage. The first number is your fit, the second is the partner's.">i</span>
+                </span>
+                <strong>{{ '%.1f'|format(p.my_fit) }} / {{ '%.1f'|format(p.their_fit) }}</strong>
+                <span class="muted">pts</span>
+              </span>
             </div>
             <p class="hint">{{ p.reason }}</p>
           </div>

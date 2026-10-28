@@ -121,6 +121,11 @@ class TradeTemplateTests(unittest.TestCase):
         self.assertIn("Trades for your roster gaps", html)
         self.assertIn("Partner", html)
         self.assertIn("You receive", html)
+        self.assertIn("How to read this", html)
+        self.assertIn("Your value gain", html)
+        self.assertIn("Partner value (mirror)", html)
+        self.assertIn("Fit (you / partner)", html)
+        self.assertIn("data-tip=", html)
 
 
 if __name__ == "__main__":
