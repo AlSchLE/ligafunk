@@ -299,7 +299,7 @@ def harden_response(resp):
     """Private pages must never be cached; add defense-in-depth headers."""
     path = request.path or ""
     private_suffixes = ("/dashboard", "/recap/new", "/startsit",
-                        "/waivers", "/login", "/logout")
+                        "/waivers", "/trade", "/login", "/logout")
     needs_no_store = (
         bool(flask_session.get("session_id") or flask_session.get("admin_authenticated"))
         or path.startswith("/admin")
@@ -1302,6 +1302,148 @@ def waiver_advice(league_code):
         return redirect(url_for("team_dashboard", league_code=league_code))
 
     return render_template("waivers.html", team=team, league=league, content=content, week=week)
+
+
+@app.route("/l/<league_code>/trade")
+@login_required
+def trade_advisor(league_code):
+    """Trade advisor form: evaluate an offer or look for gap-filling trades."""
+    team = _get_current_team()
+    conn = get_db()
+    try:
+        league = conn.execute(
+            "SELECT * FROM leagues WHERE league_code = ?", (league_code,)
+        ).fetchone()
+        _require_team_in_league(team, league)
+    finally:
+        conn.close()
+
+    week = _parse_week(request.args.get("week"))
+    try:
+        from sleeper_recap import trade_page_options
+        page = trade_page_options(
+            league["sleeper_league_id"],
+            week=week,
+            roster_id=team["sleeper_roster_id"],
+            team_name=team["name"],
+        )
+    except ValueError as e:
+        flash(str(e))
+        return redirect(url_for("team_dashboard", league_code=league_code))
+    except Exception:
+        log.exception("Trade advisor page failed")
+        flash("Trade advisor data could not be loaded. Please try again later.")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    return render_template(
+        "trade.html",
+        team=team,
+        league=league,
+        page=page,
+        result=None,
+        mode=None,
+        week=page["week"],
+    )
+
+
+@app.route("/l/<league_code>/trade/evaluate", methods=["POST"])
+@login_required
+def trade_evaluate(league_code):
+    """Evaluate a manually selected offer and suggest counter packages."""
+    _validate_csrf()
+    team = _get_current_team()
+    conn = get_db()
+    try:
+        league = conn.execute(
+            "SELECT * FROM leagues WHERE league_code = ?", (league_code,)
+        ).fetchone()
+        _require_team_in_league(team, league)
+    finally:
+        conn.close()
+
+    week = _parse_week(request.form.get("week"))
+    if week is None:
+        flash("Please enter a valid week (1-22).")
+        return redirect(url_for("trade_advisor", league_code=league_code))
+
+    give_ids = request.form.getlist("give")
+    get_ids = request.form.getlist("get")
+    try:
+        from sleeper_recap import generate_trade_advisor
+        result = generate_trade_advisor(
+            league["sleeper_league_id"],
+            week=week,
+            roster_id=team["sleeper_roster_id"],
+            team_name=team["name"],
+            mode="evaluate",
+            give_ids=give_ids,
+            get_ids=get_ids,
+        )
+    except ValueError as e:
+        flash(str(e))
+        return redirect(url_for("trade_advisor", league_code=league_code, week=week))
+    except Exception:
+        log.exception("Trade evaluation failed")
+        flash("Trade evaluation failed. Please try again later.")
+        return redirect(url_for("trade_advisor", league_code=league_code, week=week))
+
+    return render_template(
+        "trade.html",
+        team=team,
+        league=league,
+        page=None,
+        result=result,
+        mode="evaluate",
+        week=week,
+    )
+
+
+@app.route("/l/<league_code>/trade/gaps", methods=["POST"])
+@login_required
+def trade_gaps(league_code):
+    """Propose trades based on weak or injured positions on my roster."""
+    _validate_csrf()
+    team = _get_current_team()
+    conn = get_db()
+    try:
+        league = conn.execute(
+            "SELECT * FROM leagues WHERE league_code = ?", (league_code,)
+        ).fetchone()
+        _require_team_in_league(team, league)
+    finally:
+        conn.close()
+
+    week = _parse_week(request.form.get("week"))
+    if week is None:
+        flash("Please enter a valid week (1-22).")
+        return redirect(url_for("trade_advisor", league_code=league_code))
+
+    try:
+        from sleeper_recap import generate_trade_advisor
+        result = generate_trade_advisor(
+            league["sleeper_league_id"],
+            week=week,
+            roster_id=team["sleeper_roster_id"],
+            team_name=team["name"],
+            mode="gaps",
+        )
+    except ValueError as e:
+        flash(str(e))
+        return redirect(url_for("trade_advisor", league_code=league_code, week=week))
+    except Exception:
+        log.exception("Trade proposal generation failed")
+        flash("Trade proposal generation failed. Please try again later.")
+        return redirect(url_for("trade_advisor", league_code=league_code, week=week))
+
+    return render_template(
+        "trade.html",
+        team=team,
+        league=league,
+        page=None,
+        result=result,
+        mode="gaps",
+        week=week,
+    )
 
 
 # ============================================================
