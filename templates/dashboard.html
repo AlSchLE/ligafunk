@@ -68,6 +68,16 @@
     </div>
   </form>
 
+  <a class="tool-card tool-teal" href="{{ url_for('trade_advisor', league_code=league.league_code) }}">
+    <span class="icon-tile" aria-hidden="true">🤝</span>
+    <span class="tool-card-body">
+      <span class="feature-kicker">Trades</span>
+      <h3>Trade advisor</h3>
+      <p>Evaluate offers, build counters and find gap-filling trades.</p>
+    </span>
+    <span class="tool-card-arrow" aria-hidden="true">↗</span>
+  </a>
+
   <a class="tool-card tool-blue" href="{{ url_for('league_rss', league_code=league.league_code) }}">
     <span class="icon-tile" aria-hidden="true">📡</span>
     <span class="tool-card-body">

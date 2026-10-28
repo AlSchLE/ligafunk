@@ -49,8 +49,20 @@ from recapcore.waivers import (
     rostered_ids,
     score_pool,
 )
-from recapcore.league_format import starter_slots
-from recapcore.store import ensure_player_cache, load_snapshot, fetch_snapshot
+from recapcore.league_format import player_pos_set, starter_slots
+from recapcore.store import (
+    ensure_player_cache,
+    fetch_snapshot,
+    load_snapshot,
+    player_label,
+)
+from recapcore.trade import (
+    build_trade_board,
+    evaluate_offer,
+    propose_gap_trades,
+    render_trade_report,
+    suggest_counters,
+)
 
 log = logging.getLogger("sleeper-web")
 
@@ -398,3 +410,314 @@ def generate_waivers(
         week=upcoming,
         alerts=alerts,
     )
+
+
+# ============================================================
+# Trade advisor
+# ============================================================
+
+def _trade_block(snapshot: dict[str, Any], league_id: str) -> dict[str, Any] | None:
+    for key, lid in LEAGUES.items():
+        if lid == league_id:
+            return (snapshot.get("leagues") or {}).get(key)
+    return None
+
+
+def _unique_ids(values: Any) -> list[str]:
+    ids: list[str] = []
+    for value in values or []:
+        pid = str(value or "")
+        if pid and pid not in ids:
+            ids.append(pid)
+    return ids
+
+
+def _trade_name(players: dict[str, dict[str, str]], pid: str) -> str:
+    info = players.get(str(pid)) or {}
+    return str(info.get("n") or player_label(players, pid))
+
+
+def _trade_player_option(
+    players: dict[str, dict[str, str]],
+    pid: str,
+    *,
+    starters: set[str],
+    reserve: set[str],
+) -> dict[str, Any]:
+    info = players.get(pid) or {}
+    positions = sorted(player_pos_set(info, pid))
+    return {
+        "pid": pid,
+        "name": str(info.get("n") or player_label(players, pid)),
+        "pos": "/".join(positions) or "?",
+        "team": str(info.get("t") or "").upper(),
+        "injury": str(info.get("inj") or ""),
+        "practice": str(info.get("prac") or ""),
+        "depth": str(info.get("dco") or ""),
+        "starter": pid in starters,
+        "reserve": pid in reserve,
+    }
+
+
+def _recent_trades(
+    block: dict[str, Any],
+    my_roster_id: str,
+    players: dict[str, dict[str, str]],
+) -> list[dict[str, Any]]:
+    """Completed trades involving this team. Pending offers are not public API data."""
+    names = block.get("team_names") or {}
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for txn in (block.get("transactions") or []) + (block.get("transactions_prev") or []):
+        if not isinstance(txn, dict) or txn.get("type") != "trade":
+            continue
+        roster_ids = {str(value) for value in txn.get("roster_ids") or [] if value}
+        if my_roster_id not in roster_ids:
+            continue
+        txn_id = str(txn.get("transaction_id") or "")
+        if txn_id and txn_id in seen:
+            continue
+        if txn_id:
+            seen.add(txn_id)
+
+        adds = txn.get("adds") or {}
+        drops = txn.get("drops") or {}
+        give_ids: list[str] = []
+        get_ids: list[str] = []
+        for pid, to_roster in adds.items():
+            pid = str(pid)
+            from_roster = drops.get(pid)
+            if str(to_roster) == my_roster_id:
+                get_ids.append(pid)
+            elif from_roster is not None and str(from_roster) == my_roster_id:
+                give_ids.append(pid)
+            elif from_roster is None and str(to_roster) != my_roster_id:
+                # Older snapshots or incomplete trade payloads: use the receiving side.
+                give_ids.append(pid)
+
+        partners = sorted(rid for rid in roster_ids if rid != my_roster_id)
+        if len(partners) == 1:
+            partner_name = names.get(partners[0], f"Team {partners[0]}")
+        elif partners:
+            partner_name = "Multiple teams"
+        else:
+            partner_name = "Unknown team"
+
+        picks_sent: list[str] = []
+        picks_received: list[str] = []
+        for pick in txn.get("draft_picks") or []:
+            if not isinstance(pick, dict):
+                continue
+            label = f"{pick.get('season') or '?'} R{pick.get('round') or '?'}"
+            previous = str(pick.get("previous_owner_id") or "")
+            owner = str(pick.get("owner_id") or "")
+            if previous == my_roster_id:
+                picks_sent.append(label)
+            elif owner == my_roster_id:
+                picks_received.append(label)
+
+        created = txn.get("created")
+        try:
+            created_label = datetime.fromtimestamp(
+                int(created) / 1000, tz=timezone.utc
+            ).strftime("%Y-%m-%d")
+        except (TypeError, ValueError, OSError):
+            created_label = ""
+
+        rows.append(
+            {
+                "transaction_id": txn_id,
+                "partner": partner_name,
+                "multi_team": len(partners) > 1,
+                "give": [
+                    {"pid": pid, "name": _trade_name(players, pid)}
+                    for pid in _unique_ids(give_ids)
+                ],
+                "get": [
+                    {"pid": pid, "name": _trade_name(players, pid)}
+                    for pid in _unique_ids(get_ids)
+                ],
+                "picks_sent": picks_sent,
+                "picks_received": picks_received,
+                "created": created_label,
+                "week": txn.get("leg") or "",
+            }
+        )
+    rows.sort(key=lambda row: (row["created"], row["transaction_id"]), reverse=True)
+    return rows[:6]
+
+
+def trade_page_options(
+    league_id: str,
+    week: int | None = None,
+    *,
+    roster_id: str | int | None = None,
+    team_name: str | None = None,
+) -> dict[str, Any]:
+    """Rosters and recent trades for the trade-advisor form (no projections)."""
+    snapshot = _load_fresh_snapshot(week)
+    upcoming = _upcoming_week(snapshot, week)
+    with SleeperClient() as client:
+        players = ensure_player_cache(client, max_age_s=PLAYERS_INJURY_MAX_AGE_S)
+
+    block = _trade_block(snapshot, league_id)
+    if block is None:
+        raise ValueError("League not found in configured leagues.")
+    roster, resolved_name = _resolve_web_team(
+        block, roster_id=roster_id, team_name=team_name
+    )
+    if roster is None:
+        raise ValueError(
+            "Your team could not be matched to a roster in this Sleeper league. "
+            "Ask the admin to set your Sleeper roster ID."
+        )
+
+    my_rid = str(roster.get("roster_id") or "")
+    names = block.get("team_names") or {}
+    mine_starters = {str(pid) for pid in (roster.get("starters") or []) if pid}
+    mine_reserve = {str(pid) for pid in (roster.get("reserve") or []) if pid}
+    mine_ids = _unique_ids(
+        list(roster.get("players") or []) + list(roster.get("reserve") or [])
+    )
+    mine = [
+        _trade_player_option(
+            players, pid, starters=mine_starters, reserve=mine_reserve
+        )
+        for pid in mine_ids
+    ]
+    mine.sort(key=lambda row: (not row["starter"], row["reserve"], row["pos"], row["name"]))
+
+    other_teams: list[dict[str, Any]] = []
+    for other in block.get("rosters") or []:
+        rid = str(other.get("roster_id") or "")
+        if not rid or rid == my_rid:
+            continue
+        starters = {str(pid) for pid in (other.get("starters") or []) if pid}
+        reserve = {str(pid) for pid in (other.get("reserve") or []) if pid}
+        ids = _unique_ids(
+            list(other.get("players") or []) + list(other.get("reserve") or [])
+        )
+        options = [
+            _trade_player_option(
+                players, pid, starters=starters, reserve=reserve
+            )
+            for pid in ids
+        ]
+        options.sort(key=lambda row: (not row["starter"], row["reserve"], row["pos"], row["name"]))
+        other_teams.append(
+            {
+                "roster_id": rid,
+                "name": names.get(rid, f"Team {rid}"),
+                "players": options,
+            }
+        )
+    other_teams.sort(key=lambda row: row["name"].casefold())
+
+    return {
+        "week": upcoming,
+        "my_team": resolved_name or "Team",
+        "my_roster_id": my_rid,
+        "my_players": mine,
+        "other_teams": other_teams,
+        "recent_trades": _recent_trades(block, my_rid, players),
+    }
+
+
+def _trade_board_for_web(
+    league_id: str,
+    week: int | None,
+    *,
+    roster_id: str | int | None,
+    team_name: str | None,
+) -> tuple[dict[str, Any], str, str]:
+    snapshot = _load_fresh_snapshot(week)
+    upcoming = _upcoming_week(snapshot, week)
+    block = _trade_block(snapshot, league_id)
+    if block is None:
+        raise ValueError("League not found in configured leagues.")
+    roster, resolved_name = _resolve_web_team(
+        block, roster_id=roster_id, team_name=team_name
+    )
+    if roster is None:
+        raise ValueError(
+            "Your team could not be matched to a roster in this Sleeper league. "
+            "Ask the admin to set your Sleeper roster ID."
+        )
+    my_rid = str(roster.get("roster_id") or "")
+    with SleeperClient() as client:
+        players = ensure_player_cache(client, max_age_s=PLAYERS_INJURY_MAX_AGE_S)
+        ctx = build_context(client, snapshot, week=upcoming)
+        board = build_trade_board(
+            client,
+            snapshot,
+            block,
+            week=upcoming,
+            players=players,
+            base_ctx=ctx,
+        )
+    if my_rid not in board["rosters"]:
+        raise ValueError("Your roster is not present in the league snapshot.")
+    return board, my_rid, resolved_name or "Team"
+
+
+def generate_trade_advisor(
+    league_id: str,
+    week: int | None = None,
+    *,
+    roster_id: str | int | None = None,
+    team_name: str | None = None,
+    mode: str = "evaluate",
+    give_ids: list[str] | None = None,
+    get_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Evaluate a manual offer or propose trades that fill roster gaps."""
+    board, my_rid, my_name = _trade_board_for_web(
+        league_id, week, roster_id=roster_id, team_name=team_name
+    )
+    if mode == "gaps":
+        proposals = propose_gap_trades(board, my_rid)
+        result = {
+            "mode": "gaps",
+            "league_name": board["league_name"],
+            "week": board["week"],
+            "my_team": my_name,
+            "my_roster_id": my_rid,
+            "proposals": proposals,
+        }
+        result["report_text"] = render_trade_report(result)
+        return result
+
+    give_ids = _unique_ids(give_ids)
+    get_ids = _unique_ids(get_ids)
+    if not give_ids or not get_ids:
+        raise ValueError("Select at least one player on each side of the offer.")
+    if any(pid not in board["players"] for pid in give_ids + get_ids):
+        raise ValueError("One or more selected players are no longer on a roster.")
+    partner_ids = {
+        str(board["players"][pid]["roster_id"])
+        for pid in get_ids
+        if pid in board["players"]
+    }
+    if len(partner_ids) != 1:
+        raise ValueError("Select the players you receive from exactly one other team.")
+    partner_rid = next(iter(partner_ids))
+    if partner_rid == my_rid:
+        raise ValueError("You cannot receive players from your own roster.")
+
+    result = evaluate_offer(
+        board,
+        my_roster_id=my_rid,
+        partner_roster_id=partner_rid,
+        give_ids=give_ids,
+        get_ids=get_ids,
+    )
+    result["counters"] = suggest_counters(
+        board,
+        my_roster_id=my_rid,
+        partner_roster_id=partner_rid,
+        give_ids=give_ids,
+        get_ids=get_ids,
+    )
+    result["my_team"] = my_name
+    result["report_text"] = render_trade_report(result)
+    return result
