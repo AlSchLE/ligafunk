@@ -30,7 +30,7 @@ from recapcore.config import (
 )
 from recapcore.league_format import summarize_format
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def _utc_now() -> str:
@@ -285,12 +285,27 @@ def _slim_txn(row: dict[str, Any]) -> dict[str, Any] | None:
         return None
     adds = row.get("adds") or {}
     drops = row.get("drops") or {}
+    picks = []
+    for pick in row.get("draft_picks") or []:
+        if not isinstance(pick, dict):
+            continue
+        picks.append(
+            {
+                "season": str(pick.get("season") or "")[:8],
+                "round": pick.get("round"),
+                "roster_id": pick.get("roster_id"),
+                "previous_owner_id": pick.get("previous_owner_id"),
+                "owner_id": pick.get("owner_id"),
+            }
+        )
     return {
+        "transaction_id": str(row.get("transaction_id") or "")[:32],
         "type": txn_type,
         "leg": row.get("leg"),
         "roster_ids": row.get("roster_ids") or [],
         "adds": adds if isinstance(adds, dict) else {},
         "drops": drops if isinstance(drops, dict) else {},
+        "draft_picks": picks[:20],
         "created": row.get("created"),
     }
 

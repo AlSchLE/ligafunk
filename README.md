@@ -10,6 +10,7 @@ Fantasy-Sport-Plattform für Sleeper-Ligen mit Recaps, Team-Verwaltung und Multi
 - **Distribution**: WhatsApp, Signal, Slack, Discord, Telegram, E-Mail, RSS
 - **Fantasy-Sport Theme**: Modernes, responsives Design
 - **Recap-Styles**: NFL-Reporter (EN) oder Football Bromance (DE), kombinierbar mit Saison-Themes
+- **Trade Advisor**: Angebote bewerten, Counter-Vorschläge bauen und Trades für Roster-Lücken finden
 
 ## Recap-Styles & Themes
 
@@ -32,6 +33,29 @@ eine thematische Zeile in die meisten Matchups. Jede Generierung nutzt ein
 frisches Zufalls-Deck: derselbe Spieltag liest sich beim nächsten Mal anders.
 Stil und Theme werden pro Recap gespeichert und auf der Recap-, Liga- und
 History-Seite als Badge angezeigt.
+
+## Trade Advisor
+
+Der Trade Advisor sitzt im Team-Dashboard und bietet drei Wege:
+
+1. **Angebot bewerten**: Spieler aus dem eigenen Roster und genau einem
+   Partner-Roster auswählen. Bewertet werden Rest-of-Season-Projektionen
+   (70 %), aktuelle Saisonform (30 %), Gegner, Lineup-Status, Bye und
+   Verletzungen. Wertet außerdem, ob das Angebot die eigenen Lücken füllt und
+   ob der Partner einen Überschuss abgibt.
+2. **Counter bauen**: Bei einem ungünstigen Angebot entstehen konkrete
+   Varianten, z. B. den teuersten abgegebenen Spieler entfernen, durch einen
+   günstigeren Bank-Spieler derselben Position ersetzen oder beim Partner einen
+   Sweetener ergänzen.
+3. **Trades für Roster-Lücken**: Vergleicht alle Roster, findet Positionen mit
+   schwachen oder verletzten Startern und schlägt Pakete vor, die eigenen Bedarf
+   mit einem Überschuss des Partners verbinden. Wertdelta und Fit werden für
+   beide Seiten angezeigt.
+
+Wichtig: Die öffentliche Sleeper-API liefert nur **abgeschlossene** Trades, keine
+offenen Angebote. Deshalb gibt es einen manuellen Offer-Builder sowie eine
+Liste der letzten abgeschlossenen Trades mit aktuellem Wert-Check. Draft-Picks
+werden in der Historie angezeigt, aber nicht in den Spielerwert eingerechnet.
 
 ## Quick Start
 
