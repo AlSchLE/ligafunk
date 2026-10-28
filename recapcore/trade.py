@@ -885,6 +885,8 @@ def render_trade_report(result: dict[str, Any]) -> str:
             title,
             f"{result.get('my_team') or 'Your team'} — trade targets for roster gaps",
             "Value = 70% rest-of-season projection + 30% current-season form, after injury discount.",
+            "Value is zero-sum: the partner's gain is the negative of yours; picks are not valued.",
+            "Fit = raw need/surplus points, not a percentage (first number yours, second partner's).",
             "",
         ]
         proposals = result.get("proposals") or []

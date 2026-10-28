@@ -52,6 +52,12 @@ Der Trade Advisor sitzt im Team-Dashboard und bietet drei Wege:
    mit einem Überschuss des Partners verbinden. Wertdelta und Fit werden für
    beide Seiten angezeigt.
 
+Die Wertzeile ist bewusst gespiegelt: `my_gain = Wert(eingehend) −
+Wert(ausgehend)` und `their_gain = −my_gain`, weil beide Seiten dieselben
+Spielerwerte nutzen und Draft-Picks nicht bewertet werden. Fit ist eine rohe
+Summe aus Need- und Surplus-Punkten, kein Prozentwert und nicht auf 0–100
+normiert; die erste Zahl ist der eigene Fit, die zweite der des Partners.
+
 Wichtig: Die öffentliche Sleeper-API liefert nur **abgeschlossene** Trades, keine
 offenen Angebote. Deshalb gibt es einen manuellen Offer-Builder sowie eine
 Liste der letzten abgeschlossenen Trades mit aktuellem Wert-Check. Draft-Picks

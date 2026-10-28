@@ -195,6 +195,19 @@ class TradeLogicTests(unittest.TestCase):
         self.assertEqual([row["pid"] for row in rows[0]["get"]], ["b"])
         self.assertEqual(rows[0]["picks_sent"], ["2027 R1"])
 
+    def test_gap_report_explains_mirrored_value_and_fit(self):
+        board = board_fixture()
+        result = {
+            "mode": "gaps",
+            "league_name": "Test League",
+            "week": 9,
+            "my_team": "My Team",
+            "proposals": propose_gap_trades(board, "1"),
+        }
+        text = render_trade_report(result)
+        self.assertIn("Value is zero-sum", text)
+        self.assertIn("Fit = raw need/surplus points", text)
+
     def test_report_is_plain_text(self):
         board = board_fixture()
         result = evaluate_offer(

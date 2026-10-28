@@ -2292,6 +2292,111 @@ code {
   color: var(--text);
 }
 
+.trade-metric-note {
+  max-width: 82ch;
+  margin: 0 0 14px;
+}
+
+.proposal-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.proposal-metric-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.proposal-metric strong {
+  white-space: nowrap;
+}
+
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+}
+
+.info-tip:hover,
+.info-tip:focus-visible {
+  border-color: var(--primary);
+  color: var(--primary);
+  outline: none;
+}
+
+.info-tip::after {
+  position: absolute;
+  z-index: 120;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 250px;
+  max-width: calc(100vw - 48px);
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-3);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  color: var(--text-soft);
+  content: attr(data-tip);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.45;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(3px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+}
+
+.info-tip-end::after {
+  right: 0;
+  left: auto;
+}
+
+.info-tip:hover::after,
+.info-tip:focus-visible::after {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+  .info-tip::after {
+    position: fixed;
+    right: 16px;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    left: 16px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .info-tip::after {
+    transition: none;
+  }
+}
+
 .delta-pill {
   padding: 3px 8px;
   border-radius: 999px;
