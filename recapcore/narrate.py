@@ -323,10 +323,10 @@ def league_recap(
         title_line += f"  ·  {voice.theme_meta['name']}"
 
     parts = [
-        "=" * 72,
+        "=" * 36,
         title_line,
         voice.openers.draw(week=week),
-        "=" * 72,
+        "=" * 36,
         "",
         voice.headings["matchups"],
         "",
