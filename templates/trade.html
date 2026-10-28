@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+{% block title %}Trade Advisor — {{ team.name }}{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div class="avatar avatar-xl avatar-3" aria-hidden="true">{{ team.name[:2]|upper }}</div>
+  <div class="page-head-copy">
+    <span class="eyebrow">Week {{ week }} · Trade advisor</span>
+    <h1>Trade advisor</h1>
+    <p>{{ team.name }} · {{ league.name }}</p>
+  </div>
+  <div class="page-head-actions">
+    <a href="{{ url_for('team_dashboard', league_code=league.league_code) }}" class="btn btn-ghost">← Back to dashboard</a>
+  </div>
+</section>
+
+{% if result and mode == 'evaluate' %}
+  <section class="card trade-summary">
+    <div class="card-head">
+      <span class="icon-tile" aria-hidden="true">⚖️</span>
+      <div>
+        <h2>{{ result.my_team }} ↔ {{ result.partner_team }}</h2>
+        <p>Rest-of-season value check for the selected offer.</p>
+      </div>
+    </div>
+
+    <div class="trade-verdict-row">
+      <div>
+        <span class="eyebrow">Verdict</span>
+        <strong class="trade-verdict">{{ result.verdict }}</strong>
+        <p class="hint">{{ result.verdict_note }}. Value delta {{ '%+.1f'|format(result.delta) }} points.</p>
+      </div>
+      <div class="stat-strip trade-stats">
+        <div class="stat">
+          <span>You receive</span>
+          <strong>{{ '%.1f'|format(result.get_value) }}</strong>
+        </div>
+        <div class="stat">
+          <span>You send</span>
+          <strong>{{ '%.1f'|format(result.give_value) }}</strong>
+        </div>
+        <div class="stat">
+          <span>Delta</span>
+          <strong class="{{ 'delta-positive' if result.delta >= 0 else 'delta-negative' }}">{{ '%+.1f'|format(result.delta) }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="trade-asset-grid">
+      <div class="asset-panel">
+        <div class="asset-panel-head">
+          <h3>You send</h3>
+          <span class="badge">{{ result.give|length }} asset{{ '' if result.give|length == 1 else 's' }}</span>
+        </div>
+        {% for p in result.give %}
+          <div class="asset-row">
+            <div class="asset-main">
+              <strong>{{ p.name }}</strong>
+              <span class="muted">{{ p.pos }} · {{ p.team }} · {{ p.lineup_status }}{% if p.slot %} ({{ p.slot }}){% endif %}</span>
+            </div>
+            <div class="asset-numbers">
+              <span>ROS <strong>{{ '%.1f'|format(p.value) }}</strong></span>
+              <span>Season {{ '%.1f'|format(p.season_points) }}</span>
+              <span>{% if p.form_ppg is not none %}Form {{ '%.1f'|format(p.form_ppg) }}/g{% else %}No form{% endif %}</span>
+            </div>
+            <div class="asset-flags">
+              {% if p.injury %}<span class="badge">{{ p.injury }}</span>{% endif %}
+              {% if p.practice %}<span class="badge">practice {{ p.practice }}</span>{% endif %}
+              {% if p.opp %}<span class="badge">{{ 'vs' if p.home else 'at' }} {{ p.opp }}</span>{% endif %}
+              {% if p.bye %}<span class="badge">bye</span>{% endif %}
+              {% if p.week_rec %}<span class="badge">week rec {{ '%.1f'|format(p.week_rec) }}</span>{% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="asset-panel">
+        <div class="asset-panel-head">
+          <h3>You receive</h3>
+          <span class="badge">{{ result['get']|length }} asset{{ '' if result['get']|length == 1 else 's' }}</span>
+        </div>
+        {% for p in result['get'] %}
+          <div class="asset-row">
+            <div class="asset-main">
+              <strong>{{ p.name }}</strong>
+              <span class="muted">{{ p.pos }} · {{ p.team }} · {{ p.lineup_status }}{% if p.slot %} ({{ p.slot }}){% endif %}</span>
+            </div>
+            <div class="asset-numbers">
+              <span>ROS <strong>{{ '%.1f'|format(p.value) }}</strong></span>
+              <span>Season {{ '%.1f'|format(p.season_points) }}</span>
+              <span>{% if p.form_ppg is not none %}Form {{ '%.1f'|format(p.form_ppg) }}/g{% else %}No form{% endif %}</span>
+            </div>
+            <div class="asset-flags">
+              {% if p.injury %}<span class="badge">{{ p.injury }}</span>{% endif %}
+              {% if p.practice %}<span class="badge">practice {{ p.practice }}</span>{% endif %}
+              {% if p.opp %}<span class="badge">{{ 'vs' if p.home else 'at' }} {{ p.opp }}</span>{% endif %}
+              {% if p.bye %}<span class="badge">bye</span>{% endif %}
+              {% if p.week_rec %}<span class="badge">week rec {{ '%.1f'|format(p.week_rec) }}</span>{% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if result.warnings %}
+      <div class="trade-warning">
+        <strong>Watch out</strong>
+        <ul>
+          {% for warning in result.warnings %}<li>{{ warning }}</li>{% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="trade-fit-grid">
+      <div>
+        <h3>Your biggest needs</h3>
+        <div class="fit-list">
+          {% for pos, score in result.my_needs_top %}
+            <span class="fit-row"><strong>{{ pos }}</strong><span>{{ '%+.1f'|format(score) }}</span></span>
+          {% endfor %}
+        </div>
+      </div>
+      <div>
+        <h3>{{ result.partner_team }}'s biggest needs</h3>
+        <div class="fit-list">
+          {% for pos, score in result.their_needs_top %}
+            <span class="fit-row"><strong>{{ pos }}</strong><span>{{ '%+.1f'|format(score) }}</span></span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <span class="icon-tile" aria-hidden="true">↔️</span>
+      <div>
+        <h2>Counter ideas</h2>
+        <p>Concrete ways to tilt the offer toward your team.</p>
+      </div>
+    </div>
+    {% if result.counters %}
+      <div class="proposal-list">
+        {% for c in result.counters %}
+          <div class="proposal-card">
+            <div class="proposal-head">
+              <strong>{{ c.label }}</strong>
+              <span class="delta-pill {{ 'delta-positive' if c.delta >= 0 else 'delta-negative' }}">{{ '%+.1f'|format(c.delta) }}</span>
+            </div>
+            <div class="proposal-assets">
+              <div><span class="eyebrow">You send</span>{% for p in c.give %}<span class="asset-chip">{{ p.name }}</span>{% endfor %}</div>
+              <div><span class="eyebrow">You receive</span>{% for p in c['get'] %}<span class="asset-chip">{{ p.name }}</span>{% endfor %}</div>
+            </div>
+            <p class="hint">{{ c.note }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="hint">No clean counter found. Try a different partner or a different player at the same position.</p>
+    {% endif %}
+    <div class="card-actions">
+      <a href="{{ url_for('trade_advisor', league_code=league.league_code, week=week) }}" class="btn btn-ghost">Build another offer</a>
+    </div>
+  </section>
+
+{% elif result and mode == 'gaps' %}
+  <section class="card">
+    <div class="card-head">
+      <span class="icon-tile" aria-hidden="true">🧩</span>
+      <div>
+        <h2>Trades for your roster gaps</h2>
+        <p>Built from weak or injured starting spots and partner surpluses.</p>
+      </div>
+    </div>
+    {% if result.proposals %}
+      <div class="proposal-list">
+        {% for p in result.proposals %}
+          <div class="proposal-card">
+            <div class="proposal-head">
+              <strong>{{ p.partner_team }}</strong>
+              <span class="badge">{{ p.label }}</span>
+            </div>
+            <div class="trade-asset-grid proposal-asset-grid">
+              <div class="asset-panel compact">
+                <h3>You send</h3>
+                {% for row in p.give %}
+                  <div class="asset-row">
+                    <div class="asset-main"><strong>{{ row.name }}</strong><span class="muted">{{ row.pos }} · {{ row.team }} · {{ row.lineup_status }}</span></div>
+                    <div class="asset-numbers"><span>ROS <strong>{{ '%.1f'|format(row.value) }}</strong></span></div>
+                  </div>
+                {% endfor %}
+              </div>
+              <div class="asset-panel compact">
+                <h3>You receive</h3>
+                {% for row in p['get'] %}
+                  <div class="asset-row">
+                    <div class="asset-main"><strong>{{ row.name }}</strong><span class="muted">{{ row.pos }} · {{ row.team }} · {{ row.lineup_status }}</span></div>
+                    <div class="asset-numbers"><span>ROS <strong>{{ '%.1f'|format(row.value) }}</strong></span></div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="proposal-numbers">
+              <span>Your value <strong class="{{ 'delta-positive' if p.my_gain >= 0 else 'delta-negative' }}">{{ '%+.1f'|format(p.my_gain) }}</strong></span>
+              <span>Partner value <strong class="{{ 'delta-positive' if p.their_gain >= 0 else 'delta-negative' }}">{{ '%+.1f'|format(p.their_gain) }}</strong></span>
+              <span>Fit {{ '%.1f'|format(p.my_fit) }} / {{ '%.1f'|format(p.their_fit) }}</span>
+            </div>
+            <p class="hint">{{ p.reason }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="hint">No viable trade found right now. Try again after the next projections update or target a different week.</p>
+    {% endif %}
+    <div class="card-actions">
+      <a href="{{ url_for('trade_advisor', league_code=league.league_code, week=week) }}" class="btn btn-ghost">Back to offer builder</a>
+    </div>
+  </section>
+
+{% else %}
+  <section class="card">
+    <div class="card-head">
+      <span class="icon-tile" aria-hidden="true">🤝</span>
+      <div>
+        <h2>Evaluate an offer</h2>
+        <p>Select what you send and what you receive. The advisor checks current-season form, rest-of-season projections, opponents, lineup status and injuries.</p>
+      </div>
+    </div>
+    <p class="hint trade-note">Sleeper's public API exposes completed trades, not pending offers. Build your live offer here; the recent completed trades are listed below.</p>
+
+    <form method="post" action="{{ url_for('trade_evaluate', league_code=league.league_code) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+      <div class="form-group trade-week">
+        <label for="trade-week">Week</label>
+        <input id="trade-week" type="number" name="week" min="1" max="22" value="{{ page.week }}" required>
+      </div>
+
+      <div class="trade-picker-grid">
+        <div class="asset-panel">
+          <div class="asset-panel-head">
+            <h3>You send</h3>
+            <span class="badge">{{ page.my_team }}</span>
+          </div>
+          <div class="check-list">
+            {% for p in page.my_players %}
+              <label class="check-row">
+                <input type="checkbox" name="give" value="{{ p.pid }}">
+                <span class="check-main">
+                  <strong>{{ p.name }}</strong>
+                  <span class="muted">{{ p.pos }} · {{ p.team }}{% if p.starter %} · starter{% endif %}{% if p.reserve %} · IR{% endif %}</span>
+                </span>
+                {% if p.injury %}<span class="badge">{{ p.injury }}</span>{% endif %}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="asset-panel">
+          <div class="asset-panel-head">
+            <h3>You receive</h3>
+            <span class="badge">one partner</span>
+          </div>
+          <p class="hint">Players must come from exactly one other team.</p>
+          <div class="check-list">
+            {% for other in page.other_teams %}
+              <details class="team-picker" {% if loop.first %}open{% endif %}>
+                <summary>{{ other.name }} <span class="muted">{{ other.players|length }} players</span></summary>
+                {% for p in other.players %}
+                  <label class="check-row">
+                    <input type="checkbox" name="get" value="{{ p.pid }}">
+                    <span class="check-main">
+                      <strong>{{ p.name }}</strong>
+                      <span class="muted">{{ p.pos }} · {{ p.team }}{% if p.starter %} · starter{% endif %}{% if p.reserve %} · IR{% endif %}</span>
+                    </span>
+                    {% if p.injury %}<span class="badge">{{ p.injury }}</span>{% endif %}
+                  </label>
+                {% endfor %}
+              </details>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button type="submit" class="btn">Evaluate offer</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <span class="icon-tile" aria-hidden="true">🧩</span>
+      <div>
+        <h2>Find trades for my gaps</h2>
+        <p>Scans every roster for a surplus at your weak or injured positions and builds offers that help both sides.</p>
+      </div>
+    </div>
+    <form method="post" action="{{ url_for('trade_gaps', league_code=league.league_code) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+      <div class="form-group trade-week">
+        <label for="gap-week">Week</label>
+        <input id="gap-week" type="number" name="week" min="1" max="22" value="{{ page.week }}" required>
+      </div>
+      <div class="card-actions">
+        <button type="submit" class="btn">Find trades for my gaps</button>
+      </div>
+    </form>
+  </section>
+
+  {% if page.recent_trades %}
+    <section class="card">
+      <div class="card-head">
+        <span class="icon-tile" aria-hidden="true">🕘</span>
+        <div>
+          <h2>Recent completed trades</h2>
+          <p>Current-value check. Pending offers are not exposed by the public Sleeper API.</p>
+        </div>
+      </div>
+      <div class="recent-trade-list">
+        {% for trade in page.recent_trades %}
+          <div class="recent-trade">
+            <div class="recent-trade-head">
+              <strong>{{ trade.partner }}</strong>
+              <span class="muted">{{ trade.created }}{% if trade.week %} · week {{ trade.week }}{% endif %}</span>
+            </div>
+            <div class="proposal-assets">
+              <div>
+                <span class="eyebrow">You sent</span>
+                {% for p in trade.give %}<span class="asset-chip">{{ p.name }}</span>{% endfor %}
+                {% for pick in trade.picks_sent %}<span class="asset-chip">{{ pick }}</span>{% endfor %}
+                {% if not trade.give and not trade.picks_sent %}<span class="muted">nothing</span>{% endif %}
+              </div>
+              <div>
+                <span class="eyebrow">You received</span>
+                {% for p in trade['get'] %}<span class="asset-chip">{{ p.name }}</span>{% endfor %}
+                {% for pick in trade.picks_received %}<span class="asset-chip">{{ pick }}</span>{% endfor %}
+                {% if not trade['get'] and not trade.picks_received %}<span class="muted">nothing</span>{% endif %}
+              </div>
+            </div>
+            {% if not trade.multi_team and trade.give and trade['get'] %}
+              <form method="post" action="{{ url_for('trade_evaluate', league_code=league.league_code) }}" class="inline-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="week" value="{{ page.week }}">
+                {% for p in trade.give %}<input type="hidden" name="give" value="{{ p.pid }}">{% endfor %}
+                {% for p in trade['get'] %}<input type="hidden" name="get" value="{{ p.pid }}">{% endfor %}
+                <button type="submit" class="btn btn-ghost btn-small">Check current value</button>
+              </form>
+            {% elif trade.multi_team %}
+              <p class="hint">Multi-team trade — evaluate it manually in the builder above.</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+{% endif %}
+
+{% if result %}
+  <section class="card share-panel">
+    <div class="card-head">
+      <span class="icon-tile small" aria-hidden="true">📤</span>
+      <div>
+        <h2>Share this trade plan</h2>
+        <p>Send the analysis to your team chat.</p>
+      </div>
+    </div>
+    <div class="share-buttons">
+      <a href="https://wa.me/?text={{ result.report_text[:500] | urlencode }}" target="_blank" rel="noopener noreferrer" class="btn-share whatsapp">📱 WhatsApp</a>
+      <button type="button" data-copy="{{ result.report_text }}" class="btn-share signal">📋 Copy</button>
+      <a href="mailto:?subject={{ (league.name ~ ' — Trade Advisor Week ' ~ week)|urlencode }}&body={{ result.report_text | urlencode }}" class="btn-share email">📧 E-Mail</a>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}
