@@ -82,6 +82,9 @@ class TradeTemplateTests(unittest.TestCase):
         self.assertIn("Recent completed trades", html)
         self.assertIn("name=\"give\"", html)
         self.assertIn("name=\"get\"", html)
+        self.assertIn('data-theme="dark"', html)
+        self.assertIn("data-theme-toggle", html)
+        self.assertIn("theme-init.js", html)
 
     def test_evaluate_renders(self):
         board = board_fixture()

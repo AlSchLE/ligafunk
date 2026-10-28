@@ -9,6 +9,7 @@ Fantasy-Sport-Plattform für Sleeper-Ligen mit Recaps, Team-Verwaltung und Multi
 - **Recaps**: Wöchentliche Recaps pro Liga, öffentlich einsehbar
 - **Distribution**: WhatsApp, Signal, Slack, Discord, Telegram, E-Mail, RSS
 - **Fantasy-Sport Theme**: Modernes, responsives Design
+- **Dark/Light Mode**: Umschaltbares Farbschema mit gespeicherter Auswahl; Dark bleibt Standard
 - **Recap-Styles**: NFL-Reporter (EN) oder Football Bromance (DE), kombinierbar mit Saison-Themes
 - **Trade Advisor**: Angebote bewerten, Counter-Vorschläge bauen und Trades für Roster-Lücken finden
 
