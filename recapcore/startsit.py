@@ -44,6 +44,12 @@ from recapcore.store import atomic_write_json, load_json, player_label
 
 log = logging.getLogger("sleeper_recap")
 
+# Open-Meteo is optional. If it is unreachable, stop retrying for every home
+# team in the same request and back off for a few minutes. Without this, a
+# single page can spend two minutes on weather timeouts before rendering.
+_WEATHER_RETRY_AFTER_S = 300
+_weather_unavailable_until = 0.0
+
 OUT_STATUSES = frozenset({"OUT", "IR", "PUP", "NA", "SUS", "SUSPENDED", "COV", "COVID", "DNR"})
 
 
@@ -791,6 +797,7 @@ def build_context(
     week: int,
     include_vegas: bool = True,
 ) -> dict[str, Any]:
+    global _weather_unavailable_until
     state = snapshot.get("nfl_state") or {}
     season = int(state.get("season") or state.get("league_season") or 2026)
     prior = int(state.get("previous_season") or (season - 1))
@@ -815,15 +822,21 @@ def build_context(
             log.warning("Prior-season week %s stats unavailable", w)
             break
     weather_by_home: dict[str, Any] = {}
+    weather_available = time.time() >= _weather_unavailable_until
     for game in games_for_week(games_cur, week):
         home = game.get("home") or ""
         if home in weather_by_home:
+            continue
+        if not weather_available:
+            weather_by_home[home] = None
             continue
         try:
             weather_by_home[home] = weather_for_game(client, game)
         except Exception as exc:
             log.warning("Weather unavailable for %s: %s", home, exc)
             weather_by_home[home] = None
+            _weather_unavailable_until = time.time() + _WEATHER_RETRY_AFTER_S
+            weather_available = False
     vegas_by_team: dict[str, dict[str, Any]] = {}
     vegas_note = "Vegas implied totals: not loaded."
     if include_vegas:
