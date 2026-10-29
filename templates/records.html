@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block title %}Record Book — {{ team.name }}{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div class="avatar avatar-xl avatar-2" aria-hidden="true">{{ team.name[:2]|upper }}</div>
+  <div class="page-head-copy">
+    <span class="eyebrow">Season {{ page.season }} · Record book</span>
+    <h1>Record book &amp; awards</h1>
+    <p>{{ team.name }} · {{ league.name }}</p>
+  </div>
+  <div class="page-head-actions">
+    <a href="{{ url_for('team_dashboard', league_code=league.league_code) }}" class="btn btn-ghost">← Back to dashboard</a>
+  </div>
+</section>
+
+{% with active='records' %}{% include "_team_tools_nav.html" %}{% endwith %}
+
+<div class="scope-switch">
+  <a class="scope-link {{ 'is-active' if page.scope != 'all' else '' }}"
+     href="{{ url_for('team_records', league_code=league.league_code) }}">This season</a>
+  <a class="scope-link {{ 'is-active' if page.scope == 'all' else '' }}"
+     href="{{ url_for('team_records', league_code=league.league_code, scope='all') }}">All-time</a>
+</div>
+
+{% if page.my %}
+<div class="stat-strip">
+  <div class="stat">
+    <span>Your record</span>
+    <strong>{{ page.my.wins }}-{{ page.my.losses }}{% if page.my.ties %}-{{ page.my.ties }}{% endif %}</strong>
+  </div>
+  <div class="stat">
+    <span>Your awards</span>
+    <strong>{{ page.my_award_count }}</strong>
+  </div>
+  <div class="stat">
+    <span>Best week</span>
+    <strong>{% if page.my_best %}{{ '%.2f'|format(page.my_best.points) }}{% else %}—{% endif %}</strong>
+  </div>
+</div>
+
+<section class="card insight-hero">
+  <div class="card-head">
+    <span class="icon-tile" aria-hidden="true">🏆</span>
+    <div>
+      <h2>{{ 'Current season' if page.scope == 'all' else 'Your season' }}</h2>
+      <p>{{ page.weeks_played }} week{{ '' if page.weeks_played == 1 else 's' }} in the books. Latest awards are from week {{ page.latest_week }}.</p>
+    </div>
+  </div>
+  <div class="insight-grid">
+    <div class="insight-item">
+      <span class="eyebrow">Table position</span>
+      <strong>#{{ page.my.rank }}</strong>
+      <span class="muted">{{ 'Playoff spot' if page.my.playoff_spot else 'Outside the cut' }} · {{ page.my.streak }} streak</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Points</span>
+      <strong>{{ '%.2f'|format(page.my.pf) }}</strong>
+      <span class="muted">{{ '%.1f'|format(page.my.ppg) }} per week · {{ '%.2f'|format(page.my.pa) }} against</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Best week</span>
+      <strong>{% if page.my_best %}{{ '%.2f'|format(page.my_best.points) }}{% else %}—{% endif %}</strong>
+      <span class="muted">{% if page.my_best %}Week {{ page.my_best.week }} vs {{ page.my_best.opponent }}{% else %}No games yet{% endif %}</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Worst week</span>
+      <strong>{% if page.my_worst %}{{ '%.2f'|format(page.my_worst.points) }}{% else %}—{% endif %}</strong>
+      <span class="muted">{% if page.my_worst %}Week {{ page.my_worst.week }} vs {{ page.my_worst.opponent }}{% else %}No games yet{% endif %}</span>
+    </div>
+  </div>
+</section>
+{% else %}
+  <p class="empty">Your team could not be found in the record book.</p>
+{% endif %}
+
+{% if page.scope == 'all' and page.all_time %}
+<section class="card insight-hero all-time-hero">
+  <div class="card-head">
+    <span class="icon-tile" aria-hidden="true">📜</span>
+    <div>
+      <h2>All-time record book</h2>
+      <p>{{ page.all_time.games_played }} games across {{ page.all_time.seasons|length }} seasons. Teams are linked by Sleeper user ID, so renames stay together.</p>
+    </div>
+  </div>
+  <div class="insight-grid">
+    <div class="insight-item">
+      <span class="eyebrow">Your all-time record</span>
+      <strong>{{ page.all_time.my.wins }}-{{ page.all_time.my.losses }}{% if page.all_time.my.ties %}-{{ page.all_time.my.ties }}{% endif %}</strong>
+      <span class="muted">{{ page.all_time.my.games }} games · {{ page.all_time.seasons|join(', ') }}</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Your all-time points</span>
+      <strong>{{ '%.2f'|format(page.all_time.my.pf) }}</strong>
+      <span class="muted">{{ '%.2f'|format(page.all_time.my.pa) }} against</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Your all-time awards</span>
+      <strong>{{ page.all_time.my.award_count }}</strong>
+      <span class="muted">Weekly awards across all seasons</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Your best game</span>
+      <strong>{% if page.all_time.my.best %}{{ '%.2f'|format(page.all_time.my.best.points) }}{% else %}—{% endif %}</strong>
+      <span class="muted">{% if page.all_time.my.best %}Season {{ page.all_time.my.best.season }} · Week {{ page.all_time.my.best.week }}{% else %}No games yet{% endif %}</span>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">🏛️</span>
+    <div>
+      <h2>All-time records</h2>
+      <p>Single-game and season records across every linked league.</p>
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Record</th>
+          <th>Manager</th>
+          <th>Season</th>
+          <th>Value</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in page.all_time.records %}
+          <tr class="{{ 'is-me' if record.is_me else '' }}">
+            <td><span aria-hidden="true">{{ record.emoji }}</span> {{ record.label }}</td>
+            <td>
+              <strong>{{ record.owner_name or record.team }}</strong>
+              {% if record.owner_name and record.team %}<span class="muted">{{ record.team }}</span>{% endif %}
+              {% if record.is_me %}<span class="you-badge">You</span>{% endif %}
+            </td>
+            <td>{{ record.season if record.season else 'All-time' }}</td>
+            <td class="record-value">{{ record.value }}</td>
+            <td class="muted">{{ record.detail }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty">No all-time records available yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="insight-columns">
+  <section class="card">
+    <div class="card-head">
+      <span class="icon-tile small" aria-hidden="true">👑</span>
+      <div>
+        <h2>Champions</h2>
+        <p>Title winners from the linked seasons.</p>
+      </div>
+    </div>
+    <div class="champion-list">
+      {% for champion in page.all_time.championships %}
+        <div class="champion-row {{ 'is-me' if champion.is_me else '' }}">
+          <span class="champion-season">{{ champion.season }}</span>
+          <div>
+            <strong>{{ champion.owner_name or champion.champion }}</strong>
+            <span class="muted">{{ champion.champion }}</span>
+          </div>
+          {% if champion.is_me %}<span class="you-badge">You</span>{% endif %}
+        </div>
+      {% else %}
+        <p class="empty">No completed championship brackets found.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <span class="icon-tile small" aria-hidden="true">🎖️</span>
+      <div>
+        <h2>Your all-time awards</h2>
+        <p>Your weekly honors across every linked season.</p>
+      </div>
+    </div>
+    <div class="award-list">
+      {% for award in page.all_time.my_awards[:12] %}
+        <div class="award-list-row">
+          <span aria-hidden="true">{{ award.emoji }}</span>
+          <div>
+            <strong>{{ award.label }}</strong>
+            <span class="muted">Season {{ award.season }} · Week {{ award.week }} · {{ award.value }}</span>
+          </div>
+        </div>
+      {% else %}
+        <p class="empty">No personal awards in the linked seasons yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endif %}
+
+<section class="card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">🎖️</span>
+    <div>
+      <h2>Week {{ page.latest_week }} awards</h2>
+      <p>League-wide honors from the latest scored week.</p>
+    </div>
+  </div>
+  <div class="award-grid">
+    {% for award in page.weekly_awards %}
+      <div class="award-card {{ 'is-me' if award.is_me else '' }}">
+        <span class="award-emoji" aria-hidden="true">{{ award.emoji }}</span>
+        <span class="eyebrow">{{ award.label }}</span>
+        <strong>{{ award.team }}</strong>
+        <span class="award-value">{{ award.value }}</span>
+        <span class="muted">{{ award.detail }}</span>
+        {% if award.is_me %}<span class="you-badge">You</span>{% endif %}
+      </div>
+    {% else %}
+      <p class="empty">No awards yet. They appear after the first scored week.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">📚</span>
+    <div>
+      <h2>{{ 'Current season record book' if page.scope == 'all' else 'Season record book' }}</h2>
+      <p>Single-week and season records. Your entries are highlighted.</p>
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Record</th>
+          <th>Holder</th>
+          <th>Value</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in page.records %}
+          <tr class="{{ 'is-me' if record.is_me else '' }}">
+            <td><span aria-hidden="true">{{ record.emoji }}</span> {{ record.label }}</td>
+            <td>
+              <strong>{{ record.team }}</strong>
+              {% if record.is_me %}<span class="you-badge">You</span>{% endif %}
+            </td>
+            <td class="record-value">{{ record.value }}</td>
+            <td class="muted">{{ record.detail }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty">No records yet. They appear after the first scored week.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="insight-columns">
+  <section class="card">
+    <div class="card-head">
+      <span class="icon-tile small" aria-hidden="true">🤝</span>
+      <div>
+        <h2>Your head-to-head</h2>
+        <p>{{ 'Every opponent across the linked seasons.' if page.scope == 'all' else 'Every opponent you have faced this season.' }}</p>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table compact-table">
+        <thead>
+          <tr>
+            <th>Opponent</th>
+            <th>Record</th>
+            <th>PF</th>
+            <th>PA</th>
+            <th>Last</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in page.head_to_head %}
+            <tr>
+              <td>
+                <strong>{{ row.opponent_owner_name if page.scope == 'all' and row.opponent_owner_name else row.opponent }}</strong>
+                {% if page.scope == 'all' and row.opponent_owner_name and row.opponent %}<span class="muted">{{ row.opponent }}</span>{% endif %}
+              </td>
+              <td>{{ row.wins }}-{{ row.losses }}{% if row.ties %}-{{ row.ties }}{% endif %}</td>
+              <td>{{ '%.2f'|format(row.points_for) }}</td>
+              <td>{{ '%.2f'|format(row.points_against) }}</td>
+              <td><span class="form-dot form-{{ row.last_result|lower }}">{{ row.last_result }}</span> <span class="muted">{% if row.last_season %}{{ row.last_season }} · {% endif %}W{{ row.last_week }}</span></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="empty">No head-to-head games yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <span class="icon-tile small" aria-hidden="true">🎖️</span>
+      <div>
+        <h2>Your awards</h2>
+        <p>{{ page.my_award_count }} award{{ '' if page.my_award_count == 1 else 's' }} won this season.</p>
+      </div>
+    </div>
+    <div class="award-list">
+      {% for award in page.my_awards[:10] %}
+        <div class="award-list-row">
+          <span aria-hidden="true">{{ award.emoji }}</span>
+          <div>
+            <strong>{{ award.label }}</strong>
+            <span class="muted">Week {{ award.week }} · {{ award.value }} · {{ award.detail }}</span>
+          </div>
+        </div>
+      {% else %}
+        <p class="empty">No personal awards yet. Keep scoring.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

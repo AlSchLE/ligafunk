@@ -1,0 +1,10 @@
+<nav class="team-tools-nav" aria-label="Team insights">
+  <a class="team-tools-link {% if active == 'standings' %}is-active{% endif %}"
+     href="{{ url_for('team_standings', league_code=league.league_code) }}">Standings</a>
+  <a class="team-tools-link {% if active == 'matchup' %}is-active{% endif %}"
+     href="{{ url_for('team_matchup', league_code=league.league_code) }}">Matchup</a>
+  <a class="team-tools-link {% if active == 'records' %}is-active{% endif %}"
+     href="{{ url_for('team_records', league_code=league.league_code) }}">Records</a>
+  <a class="team-tools-link {% if active == 'playoffs' %}is-active{% endif %}"
+     href="{{ url_for('team_playoffs', league_code=league.league_code) }}">Playoffs</a>
+</nav>

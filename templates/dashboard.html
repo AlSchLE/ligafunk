@@ -78,6 +78,46 @@
     <span class="tool-card-arrow" aria-hidden="true">↗</span>
   </a>
 
+  <a class="tool-card tool-blue" href="{{ url_for('team_standings', league_code=league.league_code) }}">
+    <span class="icon-tile" aria-hidden="true">📊</span>
+    <span class="tool-card-body">
+      <span class="feature-kicker">Table</span>
+      <h3>Standings &amp; power</h3>
+      <p>See your seed, all-play record, luck and weekly power rank.</p>
+    </span>
+    <span class="tool-card-arrow" aria-hidden="true">↗</span>
+  </a>
+
+  <a class="tool-card tool-purple" href="{{ url_for('team_matchup', league_code=league.league_code) }}">
+    <span class="icon-tile" aria-hidden="true">🏈</span>
+    <span class="tool-card-body">
+      <span class="feature-kicker">Matchup</span>
+      <h3>Matchup center</h3>
+      <p>Your opponent, projections, win chance and bench watch.</p>
+    </span>
+    <span class="tool-card-arrow" aria-hidden="true">↗</span>
+  </a>
+
+  <a class="tool-card tool-orange" href="{{ url_for('team_records', league_code=league.league_code) }}">
+    <span class="icon-tile" aria-hidden="true">🏆</span>
+    <span class="tool-card-body">
+      <span class="feature-kicker">History</span>
+      <h3>Record book</h3>
+      <p>Weekly awards, season records and your head-to-head history.</p>
+    </span>
+    <span class="tool-card-arrow" aria-hidden="true">↗</span>
+  </a>
+
+  <a class="tool-card tool-teal" href="{{ url_for('team_playoffs', league_code=league.league_code) }}">
+    <span class="icon-tile" aria-hidden="true">🎯</span>
+    <span class="tool-card-body">
+      <span class="feature-kicker">Race</span>
+      <h3>Playoff odds</h3>
+      <p>Simulated seeds, must-win weeks and your remaining schedule.</p>
+    </span>
+    <span class="tool-card-arrow" aria-hidden="true">↗</span>
+  </a>
+
   <a class="tool-card tool-blue" href="{{ url_for('league_rss', league_code=league.league_code) }}">
     <span class="icon-tile" aria-hidden="true">📡</span>
     <span class="tool-card-body">

@@ -554,6 +554,20 @@ def _require_team_in_league(team, league) -> None:
         abort(403)
 
 
+def _team_and_league(league_code):
+    """Resolve the logged-in team and its league for private team pages."""
+    team = _get_current_team()
+    conn = get_db()
+    try:
+        league = conn.execute(
+            "SELECT * FROM leagues WHERE league_code = ?", (league_code,)
+        ).fetchone()
+        _require_team_in_league(team, league)
+    finally:
+        conn.close()
+    return team, league
+
+
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     next_url = _safe_next_url(request.form.get("next") or request.args.get("next"))
@@ -1361,6 +1375,104 @@ def team_dashboard(league_code):
     finally:
         conn.close()
     return render_template("dashboard.html", team=team, league=league, recaps=my_recaps)
+
+
+@app.route("/l/<league_code>/standings")
+@login_required
+def team_standings(league_code):
+    """Standings, all-play records and power rankings from the team's view."""
+    team, league = _team_and_league(league_code)
+    try:
+        from team_features import get_standings
+        page = get_standings(
+            league["sleeper_league_id"],
+            roster_id=team["sleeper_roster_id"],
+            team_name=team["name"],
+        )
+    except ValueError as exc:
+        flash(str(exc))
+        return redirect(url_for("team_dashboard", league_code=league_code))
+    except Exception:
+        log.exception("Standings page failed")
+        flash("Standings could not be loaded. Please try again later.")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    return render_template("standings.html", team=team, league=league, page=page)
+
+
+@app.route("/l/<league_code>/matchup")
+@login_required
+def team_matchup(league_code):
+    """Weekly matchup center focused on the logged-in team."""
+    team, league = _team_and_league(league_code)
+    week = _parse_week(request.args.get("week"))
+    if request.args.get("week") and week is None:
+        flash("Please enter a valid week (1-22).")
+        return redirect(url_for("team_matchup", league_code=league_code))
+    try:
+        from team_features import get_matchup_center
+        page = get_matchup_center(
+            league["sleeper_league_id"],
+            roster_id=team["sleeper_roster_id"],
+            team_name=team["name"],
+            week=week,
+        )
+    except ValueError as exc:
+        flash(str(exc))
+        return redirect(url_for("team_dashboard", league_code=league_code))
+    except Exception:
+        log.exception("Matchup center failed")
+        flash("Matchup data could not be loaded. Please try again later.")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    return render_template("matchup.html", team=team, league=league, page=page)
+
+
+@app.route("/l/<league_code>/records")
+@login_required
+def team_records(league_code):
+    """Season record book and awards from the logged-in team's perspective."""
+    team, league = _team_and_league(league_code)
+    try:
+        from team_features import get_record_book
+        page = get_record_book(
+            league["sleeper_league_id"],
+            roster_id=team["sleeper_roster_id"],
+            team_name=team["name"],
+            include_history=request.args.get("scope") == "all",
+        )
+    except ValueError as exc:
+        flash(str(exc))
+        return redirect(url_for("team_dashboard", league_code=league_code))
+    except Exception:
+        log.exception("Record book failed")
+        flash("Record book could not be loaded. Please try again later.")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    return render_template("records.html", team=team, league=league, page=page)
+
+
+@app.route("/l/<league_code>/playoffs")
+@login_required
+def team_playoffs(league_code):
+    """Monte-Carlo playoff odds and remaining schedule for this team."""
+    team, league = _team_and_league(league_code)
+    try:
+        from team_features import get_playoff_odds
+        page = get_playoff_odds(
+            league["sleeper_league_id"],
+            roster_id=team["sleeper_roster_id"],
+            team_name=team["name"],
+        )
+    except ValueError as exc:
+        flash(str(exc))
+        return redirect(url_for("team_dashboard", league_code=league_code))
+    except Exception:
+        log.exception("Playoff odds failed")
+        flash("Playoff odds could not be loaded. Please try again later.")
+        return redirect(url_for("team_dashboard", league_code=league_code))
+
+    return render_template("playoffs.html", team=team, league=league, page=page)
 
 
 @app.route("/l/<league_code>/password", methods=["POST"])
