@@ -212,6 +212,21 @@ PAGE_RECORDS_ALL = {
     "all_time": {
         "seasons": [2025, 2026],
         "games_played": 30,
+        "standings": [
+            {
+                "rank": 1,
+                "name": "alice",
+                "owner_name": "alice",
+                "wins": 18,
+                "losses": 10,
+                "ties": 0,
+                "pf": 3200.5,
+                "pa": 3000.2,
+                "games": 28,
+                "win_pct": 0.643,
+                "is_me": True,
+            }
+        ],
         "records": [
             {
                 "key": "highest",
@@ -400,6 +415,7 @@ class TeamFeatureRouteTests(unittest.TestCase):
         self.assertTrue(book.call_args.kwargs["include_history"])
         html = response.get_data(as_text=True)
         self.assertIn("All-time record book", html)
+        self.assertIn("All-time manager standings", html)
         self.assertIn("Old Team Name", html)
         self.assertIn("Champions", html)
         self.assertIn("alice", html)

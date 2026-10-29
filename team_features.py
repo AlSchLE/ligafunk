@@ -1380,6 +1380,7 @@ def get_record_book(
             )
             page["all_time"] = {
                 "seasons": all_seasons,
+                "standings": all_time_standings,
                 "records": _season_records(
                     all_games, all_time_standings, all_time=True
                 ),
