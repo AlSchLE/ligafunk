@@ -160,6 +160,21 @@ def _parse_int(value, minimum: int = 0, maximum: int = 2**31 - 1) -> int | None:
     return number
 
 
+def _generate_initial_password() -> str:
+    """Generate a one-time team password (16 URL-safe characters)."""
+    return secrets.token_urlsafe(12)
+
+
+def _normalize_login_name(value) -> str:
+    """Trim a username/team name and tolerate a leading @ from Sleeper handles."""
+    if not isinstance(value, str):
+        return ""
+    name = value.strip()
+    if name.startswith("@"):
+        name = name[1:].strip()
+    return name[:200]
+
+
 # Auto-backup directory
 BACKUP_DIR = Path(__file__).resolve().parent / "backups"
 BACKUP_DIR.mkdir(exist_ok=True)
@@ -299,7 +314,7 @@ def harden_response(resp):
     """Private pages must never be cached; add defense-in-depth headers."""
     path = request.path or ""
     private_suffixes = ("/dashboard", "/recap/new", "/startsit",
-                        "/waivers", "/trade", "/login", "/logout")
+                        "/waivers", "/trade", "/password", "/login", "/logout")
     needs_no_store = (
         bool(flask_session.get("session_id") or flask_session.get("admin_authenticated"))
         or path.startswith("/admin")
@@ -623,7 +638,7 @@ def download_backup(filename):
 _BACKUP_SCHEMA = {
     "leagues": ("id", "name", "sleeper_league_id", "league_code", "created_at"),
     "teams": ("id", "league_id", "name", "owner_name", "sleeper_roster_id",
-              "password_hash", "created_at"),
+              "username", "password_hash", "created_at"),
     "recaps": ("id", "league_id", "week", "content", "created_by",
                "created_at", "style", "theme"),
     "webhooks": ("id", "league_id", "webhook_type", "webhook_url", "created_at"),
@@ -737,6 +752,7 @@ def import_backup():
 @app.route("/admin", methods=["GET", "POST"])
 @admin_required
 def admin():
+    import_result = None
     if request.method == "POST":
         _validate_csrf()
         action = request.form.get("action")
@@ -784,6 +800,7 @@ def admin():
             league_id = _parse_int(request.form.get("league_id"), 1, 2**31 - 1)
             name = request.form.get("name", "").strip()
             owner_name = request.form.get("owner_name", "").strip()
+            username = request.form.get("username", "").strip().lstrip("@").strip()
             sleeper_roster_id = request.form.get("sleeper_roster_id", "").strip()
             password = request.form.get("password", "")
             if not name or not owner_name or not password:
@@ -792,8 +809,11 @@ def admin():
             if league_id is None:
                 flash("Invalid league.")
                 return redirect(url_for("admin"))
-            if len(name) > 200 or len(owner_name) > 200:
-                flash("Team or owner name is too long.")
+            if len(name) > 200 or len(owner_name) > 200 or len(username) > 80:
+                flash("Team, owner, or username is too long.")
+                return redirect(url_for("admin"))
+            if any(ord(ch) < 0x20 or ord(ch) == 0x7f for ch in username):
+                flash("Sleeper username contains invalid characters.")
                 return redirect(url_for("admin"))
             if not 10 <= len(password) <= MAX_PASSWORD_LENGTH:
                 flash("Team password must be 10-256 characters long.")
@@ -816,6 +836,12 @@ def admin():
                 if duplicate:
                     flash("A team with this name already exists in this league.")
                     return redirect(url_for("admin"))
+                if username and conn.execute(
+                    "SELECT 1 FROM teams WHERE league_id = ? AND username = ? COLLATE NOCASE",
+                    (league_id, username),
+                ).fetchone():
+                    flash("This Sleeper username is already assigned to another team.")
+                    return redirect(url_for("admin"))
                 if sleeper_roster_id and conn.execute(
                     "SELECT 1 FROM teams WHERE league_id = ? AND sleeper_roster_id = ?",
                     (league_id, sleeper_roster_id),
@@ -823,10 +849,11 @@ def admin():
                     flash("This Sleeper roster ID is already assigned to another team.")
                     return redirect(url_for("admin"))
                 conn.execute(
-                    "INSERT INTO teams (league_id, name, owner_name, sleeper_roster_id, password_hash) "
-                    "VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO teams "
+                    "(league_id, name, owner_name, sleeper_roster_id, username, password_hash) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
                     (league_id, name, owner_name, sleeper_roster_id or None,
-                     hash_password(password)),
+                     username or None, hash_password(password)),
                 )
                 conn.commit()
             finally:
@@ -834,6 +861,171 @@ def admin():
             _auto_backup()
             flash(f"Team '{name}' added")
             return redirect(url_for("admin"))
+
+        elif action == "import_sleeper_teams":
+            league_id = _parse_int(request.form.get("league_id"), 1, 2**31 - 1)
+            if league_id is None:
+                flash("Invalid league.")
+                return redirect(url_for("admin"))
+
+            conn = get_db()
+            try:
+                league = conn.execute(
+                    "SELECT * FROM leagues WHERE id = ?", (league_id,)
+                ).fetchone()
+            finally:
+                conn.close()
+            if not league:
+                flash("Invalid league.")
+                return redirect(url_for("admin"))
+
+            try:
+                from sleeper_recap import fetch_league_participants
+                participants = fetch_league_participants(league["sleeper_league_id"])
+            except Exception:
+                log.exception("Could not load Sleeper participants for league %s", league_id)
+                flash("Could not load participants from Sleeper. Please try again.")
+                return redirect(url_for("admin"))
+
+            if not participants:
+                flash("Sleeper returned no participants for this league.")
+                return redirect(url_for("admin"))
+
+            created = []
+            linked = []
+            skipped = []
+            conn = get_db()
+            try:
+                existing = conn.execute(
+                    "SELECT id, name, owner_name, username, sleeper_roster_id "
+                    "FROM teams WHERE league_id = ?",
+                    (league_id,),
+                ).fetchall()
+                by_roster = {
+                    str(team["sleeper_roster_id"]): team
+                    for team in existing if team["sleeper_roster_id"]
+                }
+                by_username = {
+                    str(team["username"]).casefold(): team
+                    for team in existing if team["username"]
+                }
+                by_name = {str(team["name"]).casefold(): team for team in existing}
+                name_counts = {}
+                for participant in participants:
+                    key = participant["name"].casefold()
+                    name_counts[key] = name_counts.get(key, 0) + 1
+
+                for participant in participants:
+                    team_name = participant["name"]
+                    owner_name = participant["owner_name"]
+                    username = participant["username"]
+                    roster_id = participant["roster_id"]
+                    username_key = username.casefold() if username else ""
+                    name_key = team_name.casefold()
+
+                    # Prefer the stable Sleeper roster ID, then the unique
+                    # Sleeper username, and only then a unique team name. The
+                    # last fallback links teams created before this feature.
+                    match = by_roster.get(roster_id) if roster_id else None
+                    if match is None and username_key:
+                        match = by_username.get(username_key)
+                    if match is None and name_counts.get(name_key) == 1:
+                        match = by_name.get(name_key)
+
+                    if match is not None:
+                        updates = {}
+                        if username and not match["username"] and username_key not in by_username:
+                            updates["username"] = username
+                        if (roster_id and not match["sleeper_roster_id"]
+                                and roster_id not in by_roster):
+                            updates["sleeper_roster_id"] = roster_id
+                        if updates:
+                            set_clause = ", ".join(f"{column} = ?" for column in updates)
+                            conn.execute(
+                                f"UPDATE teams SET {set_clause} WHERE id = ?",
+                                (*updates.values(), match["id"]),
+                            )
+                            if "username" in updates:
+                                by_username[username_key] = match
+                            if "sleeper_roster_id" in updates:
+                                by_roster[roster_id] = match
+                            linked.append(team_name)
+                        else:
+                            skipped.append(f"{team_name} (already exists)")
+                        continue
+
+                    if not username:
+                        skipped.append(f"{team_name} (no Sleeper username)")
+                        continue
+                    if username_key in by_username:
+                        skipped.append(f"{team_name} (username already assigned)")
+                        continue
+                    if name_key in by_name:
+                        skipped.append(f"{team_name} (team name already exists)")
+                        continue
+
+                    password = _generate_initial_password()
+                    try:
+                        cursor = conn.execute(
+                            "INSERT INTO teams "
+                            "(league_id, name, owner_name, sleeper_roster_id, username, password_hash) "
+                            "VALUES (?, ?, ?, ?, ?, ?)",
+                            (league_id, team_name, owner_name, roster_id or None,
+                             username, hash_password(password)),
+                        )
+                    except sqlite3.IntegrityError:
+                        skipped.append(f"{team_name} (conflict)")
+                        continue
+
+                    row = {
+                        "id": cursor.lastrowid,
+                        "name": team_name,
+                        "owner_name": owner_name,
+                        "username": username,
+                        "sleeper_roster_id": roster_id,
+                    }
+                    by_username[username_key] = row
+                    by_name[name_key] = row
+                    if roster_id:
+                        by_roster[roster_id] = row
+                    created.append({
+                        "team_name": team_name,
+                        "owner_name": owner_name,
+                        "username": username,
+                        "password": password,
+                    })
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                log.exception("Could not import Sleeper teams for league %s", league_id)
+                flash("Could not create teams. Please try again.")
+                return redirect(url_for("admin"))
+            finally:
+                conn.close()
+
+            if created or linked:
+                _auto_backup()
+
+            login_url = url_for("login", league_code=league["league_code"], _external=True)
+            note = "Bitte ändere dein Passwort nach dem ersten Login."
+            for item in created:
+                item["copy_text"] = (
+                    f"Team: {item['team_name']}\n"
+                    f"Sleeper: @{item['username']}\n"
+                    f"Startpasswort: {item['password']}\n"
+                    f"Login: {login_url}\n\n{note}"
+                )
+            copy_text = "\n\n".join(item["copy_text"] for item in created)
+
+            import_result = {
+                "league_name": league["name"],
+                "created": created,
+                "linked": linked,
+                "skipped": skipped,
+                "copy_text": copy_text,
+            }
+            # Render the admin page directly so the initial passwords are
+            # visible exactly once and never stored in a cookie or database.
 
         elif action == "add_webhook":
             league_id = _parse_int(request.form.get("league_id"), 1, 2**31 - 1)
@@ -918,7 +1110,7 @@ def admin():
         leagues = conn.execute("SELECT * FROM leagues ORDER BY created_at DESC").fetchall()
         teams = conn.execute("""
             SELECT t.id, t.league_id, t.name, t.owner_name, t.sleeper_roster_id,
-                   t.created_at, l.name AS league_name
+                   t.username, t.created_at, l.name AS league_name
             FROM teams t
             JOIN leagues l ON t.league_id = l.id
             ORDER BY l.name, t.name
@@ -944,7 +1136,8 @@ def admin():
         masked_webhooks.append(row)
 
     return render_template("admin.html", leagues=leagues, teams=teams,
-                           webhooks=masked_webhooks, backups=backups)
+                           webhooks=masked_webhooks, backups=backups,
+                           import_result=import_result)
 
 
 # ============================================================
@@ -1040,14 +1233,10 @@ def login(league_code):
     conn = get_db()
     try:
         league = conn.execute("SELECT * FROM leagues WHERE league_code = ?", (league_code,)).fetchone()
-        if not league:
-            abort(404)
-        teams = conn.execute(
-            "SELECT id, name, owner_name FROM teams WHERE league_id = ?",
-            (league["id"],),
-        ).fetchall()
     finally:
         conn.close()
+    if not league:
+        abort(404)
 
     if request.method == "POST":
         _validate_csrf()
@@ -1055,29 +1244,46 @@ def login(league_code):
         scope = f"team:{league['id']}"
         if login_attempts(scope, client, LOGIN_WINDOW_MINUTES) >= MAX_LOGIN_ATTEMPTS:
             log.warning("Team login rate limit hit for league %s from %s", league["id"], client)
-            return render_template("login.html", league=league, teams=teams,
+            return render_template("login.html", league=league,
                                    rate_limited=True), 429
 
-        team_id = _parse_int(request.form.get("team_id", ""), 1, 2**31 - 1)
+        login_name = _normalize_login_name(request.form.get("username", ""))
         password = request.form.get("password", "")
-        if team_id is None or not password or len(password) > MAX_PASSWORD_LENGTH:
+        # Older cached login forms posted a team_id; keep that path working.
+        team_id = _parse_int(request.form.get("team_id", ""), 1, 2**31 - 1)
+        if (not login_name and team_id is None) or not password \
+                or len(password) > MAX_PASSWORD_LENGTH:
             record_login_failure(scope, client)
-            flash("Invalid password.")
+            flash("Invalid username or password.")
             return redirect(url_for("login", league_code=league_code))
 
         # Fetch the hash only for verification; it never enters template data.
         conn = get_db()
         try:
-            team = conn.execute(
-                "SELECT id, name, owner_name, password_hash FROM teams "
-                "WHERE id = ? AND league_id = ?",
-                (team_id, league["id"]),
-            ).fetchone()
+            if team_id is not None:
+                team = conn.execute(
+                    "SELECT id, name, owner_name, username, password_hash FROM teams "
+                    "WHERE id = ? AND league_id = ?",
+                    (team_id, league["id"]),
+                ).fetchone()
+            else:
+                team = conn.execute(
+                    "SELECT id, name, owner_name, username, password_hash FROM teams "
+                    "WHERE league_id = ? AND username = ? COLLATE NOCASE",
+                    (league["id"], login_name),
+                ).fetchone()
+                if not team:
+                    # Backward compatibility for teams without a username.
+                    team = conn.execute(
+                        "SELECT id, name, owner_name, username, password_hash FROM teams "
+                        "WHERE league_id = ? AND name = ? COLLATE NOCASE",
+                        (league["id"], login_name),
+                    ).fetchone()
         finally:
             conn.close()
         if not team or not verify_password(password, team["password_hash"]):
             record_login_failure(scope, client)
-            flash("Invalid password.")
+            flash("Invalid username or password.")
             return redirect(url_for("login", league_code=league_code))
 
         # Transparently upgrade legacy SHA-256 hashes to scrypt.
@@ -1102,7 +1308,7 @@ def login(league_code):
         flask_session["session_id"] = create_session(team["id"])
         return redirect(url_for("team_dashboard", league_code=league_code))
 
-    return render_template("login.html", league=league, teams=teams)
+    return render_template("login.html", league=league)
 
 
 @app.route("/l/<league_code>/logout", methods=["POST"])
@@ -1138,6 +1344,61 @@ def team_dashboard(league_code):
     finally:
         conn.close()
     return render_template("dashboard.html", team=team, league=league, recaps=my_recaps)
+
+
+@app.route("/l/<league_code>/password", methods=["POST"])
+@login_required
+def change_team_password(league_code):
+    """Let a logged-in team rotate its own password."""
+    team = _get_current_team()
+    conn = get_db()
+    try:
+        league = conn.execute(
+            "SELECT * FROM leagues WHERE league_code = ?", (league_code,)
+        ).fetchone()
+        _require_team_in_league(team, league)
+        _validate_csrf()
+
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        if not current_password or len(current_password) > MAX_PASSWORD_LENGTH:
+            flash("Current password is required.")
+            return redirect(url_for("team_dashboard", league_code=league_code))
+        if not 10 <= len(new_password) <= MAX_PASSWORD_LENGTH:
+            flash("New password must be 10-256 characters long.")
+            return redirect(url_for("team_dashboard", league_code=league_code))
+        if new_password != confirm_password:
+            flash("New passwords do not match.")
+            return redirect(url_for("team_dashboard", league_code=league_code))
+
+        row = conn.execute(
+            "SELECT password_hash FROM teams WHERE id = ? AND league_id = ?",
+            (team["id"], league["id"]),
+        ).fetchone()
+        if not row or not verify_password(current_password, row["password_hash"]):
+            flash("Current password is incorrect.")
+            return redirect(url_for("team_dashboard", league_code=league_code))
+
+        conn.execute(
+            "UPDATE teams SET password_hash = ? WHERE id = ?",
+            (hash_password(new_password), team["id"]),
+        )
+        # Keep this browser signed in, but invalidate every other session.
+        session_id = _session_id()
+        if session_id:
+            conn.execute(
+                "DELETE FROM sessions WHERE team_id = ? AND id != ?",
+                (team["id"], session_id),
+            )
+        else:
+            conn.execute("DELETE FROM sessions WHERE team_id = ?", (team["id"],))
+        conn.commit()
+    finally:
+        conn.close()
+
+    flash("Password updated. Other devices were logged out.")
+    return redirect(url_for("team_dashboard", league_code=league_code))
 
 
 @app.route("/l/<league_code>/recap/new", methods=["GET", "POST"])

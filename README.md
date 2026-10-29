@@ -171,8 +171,17 @@ Startsequenz bricht mit einer klaren Fehlermeldung ab, wenn eine
 
 1. Öffne http://localhost:5000/admin
 2. Erstelle eine Liga mit Name und Sleeper League ID
-3. Füge Teams mit Passwort hinzu (mindestens 10 Zeichen)
-4. (Optional) Webhooks für Slack/Discord/Telegram konfigurieren
+3. Klicke bei **Create teams from Sleeper** auf **Create missing teams**,
+   um für alle Ligateilnehmenden automatisch Team-Logins anzulegen
+4. Alternativ Teams manuell mit Passwort hinzufügen (mindestens 10 Zeichen)
+5. (Optional) Webhooks für Slack/Discord/Telegram konfigurieren
+
+Beim automatischen Anlegen wird der **Sleeper-Benutzername** des Team-Owners
+als Loginname verwendet. Jedes neue Team erhält ein zufälliges Startpasswort.
+Die Zugangsdaten werden nach dem Anlegen **einmalig** angezeigt und können
+direkt für eine Sleeper-PM kopiert werden. Vorhandene Teams werden über
+Sleeper-Roster-ID, Benutzername oder Teamname erkannt und nicht doppelt
+angelegt.
 
 Im Admin-Panel lassen sich Team-Passwörter zurücksetzen (dabei werden alle
 aktiven Sessions des Teams sofort ungültig) und Webhooks wieder entfernen.
@@ -188,8 +197,13 @@ Diese URL kann geteilt werden — ohne Login kann man Recaps lesen.
 
 1. Auf der Startseite den Liga-Code oder den kompletten Liga-Link eingeben
    (alternativ auf der Liga-Seite auf "Team Login" klicken)
-2. Team auswählen und Passwort eingeben
+2. Sleeper-Benutzername und Passwort eingeben
 3. Zugriff auf privates Dashboard
+
+Teams, die vor der Benutzername-Anmeldung angelegt wurden, können weiterhin
+ihren Teamnamen als Login verwenden. Im Dashboard kann jedes Team sein Passwort
+selbst ändern; dabei werden alle anderen aktiven Sessions des Teams beendet.
+Team-Logins haben keine Admin-Rechte.
 
 ## Start/Sit und Waivers: Datenbasis
 

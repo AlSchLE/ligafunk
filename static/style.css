@@ -3158,3 +3158,88 @@ html[data-theme="light"] .flash {
     color: #111;
   }
 }
+
+/* ============================================================
+   Admin: one-time Sleeper team credentials
+   ============================================================ */
+
+.admin-result-card {
+  border-color: rgba(0, 230, 129, 0.34);
+  background: linear-gradient(160deg, rgba(0, 230, 129, 0.09), var(--surface));
+}
+
+.credential-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+  list-style: none;
+}
+
+.credential-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(8, 11, 16, 0.35);
+}
+
+.credential-list strong {
+  display: block;
+  color: var(--text);
+}
+
+.credential-list code {
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+
+.credential-details {
+  margin-top: 12px;
+}
+
+.credential-details summary {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.credential-copy {
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(8, 11, 16, 0.45);
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+html[data-theme="light"] .credential-list li,
+html[data-theme="light"] .credential-copy {
+  background: rgba(15, 40, 26, 0.03);
+}
+
+@media (max-width: 640px) {
+  .credential-list li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .credential-list code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+.credential-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}

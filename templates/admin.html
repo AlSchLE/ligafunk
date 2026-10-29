@@ -14,6 +14,55 @@
   </div>
 </section>
 
+{% if import_result %}
+<section class="card admin-result-card">
+  <div class="card-head">
+    <span class="icon-tile" aria-hidden="true">✅</span>
+    <div>
+      <h2>Teams created from Sleeper</h2>
+      <p>{{ import_result.league_name }} · {{ import_result.created|length }} new login(s)</p>
+    </div>
+  </div>
+
+  {% if import_result.created %}
+    <p class="hint">
+      Copy these start passwords now. They are shown only once and are not stored
+      in plain text. Teams can change them after their first login.
+    </p>
+    <button type="button" class="btn" data-copy="{{ import_result.copy_text }}">
+      📋 Copy all for Sleeper PM
+    </button>
+    <ul class="credential-list">
+      {% for c in import_result.created %}
+        <li>
+          <div>
+            <strong>{{ c.team_name }}</strong>
+            <span class="team-owner">{{ c.owner_name }} · @{{ c.username }}</span>
+          </div>
+          <div class="credential-actions">
+            <code>{{ c.password }}</code>
+            <button type="button" class="btn btn-small btn-ghost" data-copy="{{ c.copy_text }}">Copy</button>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+    <details class="credential-details">
+      <summary>Show copy text</summary>
+      <pre class="credential-copy">{{ import_result.copy_text }}</pre>
+    </details>
+  {% else %}
+    <p class="empty">No new teams were created.</p>
+  {% endif %}
+
+  {% if import_result.linked %}
+    <p class="hint"><strong>Linked existing teams:</strong> {{ import_result.linked|join(', ') }}</p>
+  {% endif %}
+  {% if import_result.skipped %}
+    <p class="hint"><strong>Skipped:</strong> {{ import_result.skipped|join('; ') }}</p>
+  {% endif %}
+</section>
+{% endif %}
+
 <section class="card admin-warning-card">
   <div class="card-head">
     <span class="icon-tile" aria-hidden="true">💾</span>
@@ -32,6 +81,38 @@
       <button type="button" class="btn btn-secondary" data-trigger-file="backup-file-input">📤 Import backup</button>
     </form>
   </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">⚡</span>
+    <div>
+      <h2>Create teams from Sleeper</h2>
+      <p>Create a login for every participant using their Sleeper username.</p>
+    </div>
+  </div>
+  {% if leagues %}
+    <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="action" value="import_sleeper_teams">
+      <div class="form-group">
+        <label for="import-league">League</label>
+        <select id="import-league" name="league_id" required>
+          {% for l in leagues %}
+            <option value="{{ l.id }}">{{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn">Create missing teams</button>
+    </form>
+    <p class="hint">
+      Existing teams are matched by Sleeper roster ID, username or team name and
+      are never duplicated. Each new team gets a generated start password that is
+      shown once after creation. Participants can change it in their dashboard.
+    </p>
+  {% else %}
+    <p class="empty">Create a league first.</p>
+  {% endif %}
 </section>
 
 <div class="grid-2">
@@ -85,6 +166,11 @@
       <div class="form-group">
         <label for="team-owner">Owner name</label>
         <input id="team-owner" type="text" name="owner_name" required maxlength="200" placeholder="e.g. Alex">
+      </div>
+      <div class="form-group">
+        <label for="team-username">Sleeper username (optional)</label>
+        <input id="team-username" type="text" name="username" maxlength="80"
+               autocomplete="off" placeholder="e.g. alex_fantasy">
       </div>
       <div class="form-group">
         <label for="team-roster-id">Sleeper roster ID (optional)</label>
@@ -178,7 +264,9 @@
         <li>
           <div>
             <strong>{{ t.name }}</strong>
-            <span class="team-owner">{{ t.owner_name }} · {{ t.league_name }}</span>
+            <span class="team-owner">
+              {{ t.owner_name }}{% if t.username %} · @{{ t.username }}{% endif %} · {{ t.league_name }}
+            </span>
           </div>
           <form method="post" class="reset-form">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">

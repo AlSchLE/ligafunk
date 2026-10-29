@@ -22,7 +22,7 @@
       <span class="icon-tile small" aria-hidden="true">🔐</span>
       <div>
         <h2>Team login</h2>
-        <p>Select your team and enter the password.</p>
+        <p>Enter your Sleeper username and team password.</p>
       </div>
     </div>
 
@@ -33,12 +33,10 @@
     <form method="post">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
       <div class="form-group">
-        <label for="team-id">Team</label>
-        <select id="team-id" name="team_id" required>
-          {% for t in teams %}
-            <option value="{{ t.id }}">{{ t.name }} ({{ t.owner_name }})</option>
-          {% endfor %}
-        </select>
+        <label for="team-username">Sleeper username</label>
+        <input id="team-username" type="text" name="username" required maxlength="200"
+               autocomplete="username" autocapitalize="none" spellcheck="false"
+               placeholder="e.g. alex_fantasy">
       </div>
       <div class="form-group">
         <label for="team-password">Password</label>
@@ -48,6 +46,10 @@
       <button type="submit" class="btn btn-full">Login</button>
     </form>
 
+    <p class="hint">
+      Use the Sleeper username from your invitation. Teams created before the
+      username login can still use their team name.
+    </p>
     <p class="hint">League code: <code>{{ league.league_code }}</code></p>
   </div>
 </div>
