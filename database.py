@@ -73,10 +73,19 @@ def init_db():
             name TEXT NOT NULL,
             owner_name TEXT NOT NULL,
             sleeper_roster_id TEXT,
+            username TEXT,
             password_hash TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (league_id) REFERENCES leagues (id)
         )
+    """)
+    # Sleeper usernames were added after the first release. Keep the login
+    # backward compatible for teams that still only have a team name.
+    _ensure_column(cursor, "teams", "username", "TEXT")
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_league_username
+        ON teams (league_id, username COLLATE NOCASE)
+        WHERE username IS NOT NULL AND username <> ''
     """)
 
     cursor.execute("""
@@ -201,7 +210,8 @@ def get_session_team(session_id: str) -> Optional[dict]:
         # Never load password_hash into the request/template context.
         cursor.execute("""
             SELECT t.id, t.league_id, t.name, t.owner_name, t.sleeper_roster_id,
-                   l.name as league_name, l.sleeper_league_id, l.league_code
+                   t.username, l.name as league_name, l.sleeper_league_id,
+                   l.league_code
             FROM sessions s
             JOIN teams t ON s.team_id = t.id
             JOIN leagues l ON t.league_id = l.id

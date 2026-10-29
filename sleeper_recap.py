@@ -72,6 +72,68 @@ log = logging.getLogger("sleeper-web")
 SNAPSHOT_MAX_AGE_S = 15 * 60
 
 
+def _clean_sleeper_label(value: Any, fallback: str = "") -> str:
+    """Drop control characters from external Sleeper text and trim it."""
+    text = "".join(
+        ch for ch in str(value or "") if ord(ch) >= 0x20 and ord(ch) != 0x7f
+    ).strip()
+    return text or fallback
+
+
+def fetch_league_participants(league_id: str) -> list[dict[str, str]]:
+    """Return one login candidate per owned Sleeper roster.
+
+    The login name is the owner's Sleeper username. Display names and custom
+    team names are only used for the human-readable labels.
+    """
+    with SleeperClient() as client:
+        users = client.users(league_id)
+        rosters = client.rosters(league_id)
+
+    if not isinstance(users, list) or not isinstance(rosters, list):
+        raise ValueError("Unexpected Sleeper participants payload.")
+
+    by_user = {
+        str(user.get("user_id")): user
+        for user in users
+        if isinstance(user, dict) and user.get("user_id") is not None
+    }
+    participants: list[dict[str, str]] = []
+    for roster in rosters:
+        if not isinstance(roster, dict):
+            continue
+        roster_id = roster.get("roster_id")
+        owner_id = roster.get("owner_id")
+        if roster_id is None or owner_id is None:
+            continue
+        owner = by_user.get(str(owner_id), {})
+        metadata = owner.get("metadata") if isinstance(owner.get("metadata"), dict) else {}
+        team_name = _clean_sleeper_label(
+            metadata.get("team_name") or owner.get("display_name"),
+            f"Team {roster_id}",
+        )
+        owner_name = _clean_sleeper_label(
+            owner.get("display_name") or owner.get("username"),
+            f"Owner {roster_id}",
+        )
+        username = _clean_sleeper_label(
+            owner.get("username") or owner.get("display_name")
+        )
+        participants.append({
+            "roster_id": str(roster_id),
+            "name": team_name[:200],
+            "owner_name": owner_name[:200],
+            "username": username[:80],
+        })
+
+    def _sort_key(participant: dict[str, str]) -> tuple[int, str]:
+        roster_id = participant.get("roster_id", "")
+        return (int(roster_id) if roster_id.isdigit() else 10**9, roster_id)
+
+    participants.sort(key=_sort_key)
+    return participants
+
+
 def _snapshot_age_seconds(snapshot: dict[str, Any]) -> float | None:
     """Age of a stored snapshot, or None when fetched_at is missing/invalid."""
     raw = snapshot.get("fetched_at")
