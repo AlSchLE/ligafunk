@@ -12,6 +12,10 @@ Fantasy-Sport-Plattform für Sleeper-Ligen mit Recaps, Team-Verwaltung und Multi
 - **Dark/Light Mode**: Umschaltbares Farbschema mit gespeicherter Auswahl; Dark bleibt Standard
 - **Recap-Styles**: NFL-Reporter (EN) oder Football Bromance (DE), kombinierbar mit Saison-Themes
 - **Trade Advisor**: Angebote bewerten, Counter-Vorschläge bauen und Trades für Roster-Lücken finden
+- **Standings & Power Rankings**: Tabelle, All-Play-Rekord, Luck und Power-Score
+- **Matchup Center**: Woche für Woche Projektionen, Win-Chance und direkter Vergleich
+- **Record Book & Awards**: Wochen-Awards, Rekorde, Head-to-Head und All-Time-Historie
+- **Playoff-Race-Simulator**: Monte-Carlo-Odds für Playoffs, Seeds und Byes
 
 ## Recap-Styles & Themes
 
@@ -63,6 +67,54 @@ Wichtig: Die öffentliche Sleeper-API liefert nur **abgeschlossene** Trades, kei
 offenen Angebote. Deshalb gibt es einen manuellen Offer-Builder sowie eine
 Liste der letzten abgeschlossenen Trades mit aktuellem Wert-Check. Draft-Picks
 werden in der Historie angezeigt, aber nicht in den Spielerwert eingerechnet.
+
+## Team-Tools
+
+Die vier Team-Tools sind nur nach Team-Login erreichbar, immer auf die eigene
+Liga begrenzt und teilen sich eine Unterseiten-Navigation. Team-Sessions
+erhalten dabei niemals Admin-Rechte.
+
+### Standings & Power Rankings
+
+Die Tabelle kombiniert das echte Liga-Rekord mit einem **All-Play-Rekord**:
+Jede Woche wird ein Team gegen alle anderen Teams der Liga gestellt, nicht nur
+gegen seinen tatsächlichen Gegner. Daraus entstehen All-Play-Siege, erwartete
+Siege, Luck und der Power-Score:
+
+- 40 % Liga-Rekord
+- 30 % All-Play-Siegquote
+- 20 % erzielte Saisonpunkte
+- 10 % Form der letzten fünf Spiele
+
+### Matchup Center
+
+Das Matchup Center zeigt die aktuelle Woche mit Sleeper-Projektionen,
+verbleibenden Spielern, Bench-Punkten und einer Win-Wahrscheinlichkeit. Für
+abgeschlossene Wochen werden die echten Ergebnisse verwendet; fehlen
+Projektionen, fällt die Berechnung auf den Saison-Schnitt zurück. Die
+Wahrscheinlichkeit nutzt eine Normalapproximation und ist bewusst als
+Orientierung, nicht als Garantie, zu lesen.
+
+### Record Book & Awards
+
+Das Record Book zeigt Wochen-Awards, Saison-Rekorde und den direkten
+Head-to-Head-Vergleich. Über den Umschalter **All-time** werden zusätzlich
+Rekorde, Manager-Bilanzen, Awards und Champions aus den Vorsaisons geladen.
+
+Die Historie folgt dynamisch der `previous_league_id`-Kette der aktuellen Liga.
+Team-Identitäten werden über die stabile Sleeper-`owner_id` (User-ID) aufgelöst,
+nicht über den Teamnamen. Umbenannte Teams bleiben dadurch bei derselben
+Managerin bzw. demselben Manager. Für Saxy Fantasy wird so automatisch die
+Kette von 2021 bis 2026 inklusive der 2024er-Liga gefunden, auch wenn einzelne
+Teamnamen gewechselt haben. All-Time-Daten werden 6 Stunden gecacht,
+aktuelle Daten 3 Minuten.
+
+### Playoff-Race-Simulator
+
+Der Simulator spielt die restliche Saison deterministisch 2.000-mal durch und
+zeigt Playoff-Wahrscheinlichkeit, Seed-Verteilung, Bye-Chance und den
+wahrscheinlichsten Gegner. Die Simulation ist reproduzierbar und nutzt die
+aktuelle Tabelle, Restprogramm und projizierte Punktestärke.
 
 ## Quick Start
 
@@ -275,11 +327,14 @@ Sleeper_Web/
 ├── app.py              # Flask-Anwendung
 ├── config.py           # Konfiguration
 ├── database.py         # SQLite-Datenbank
-├── litestream.yml      # SQLite-Replikation nach R2/B2
+├── team_features.py    # Standings, Matchups, Record Book, Playoff-Simulation
+├── recapcore/          # Recap-, Start/Sit- und Sleeper-Helfer
 ├── templates/          # HTML-Templates
-├── static/            # CSS/JS
-├── requirements.txt   # Python-Abhängigkeiten
+├── static/             # CSS/JS
+├── tests/              # Unit- und Routentests
+├── litestream.yml      # SQLite-Replikation nach R2/B2
+├── requirements.txt    # Python-Abhängigkeiten
 ├── Dockerfile          # Docker-Image
 ├── docker-compose.yml  # Docker Compose
-└── Start-Gui.bat      # Windows-Starter
+└── Start-Gui.bat       # Windows-Starter
 ```

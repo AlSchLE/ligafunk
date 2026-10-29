@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Playoff Odds — {{ team.name }}{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div class="avatar avatar-xl avatar-3" aria-hidden="true">{{ team.name[:2]|upper }}</div>
+  <div class="page-head-copy">
+    <span class="eyebrow">Season {{ page.season }} · Playoff race</span>
+    <h1>Playoff odds</h1>
+    <p>{{ team.name }} · {{ league.name }}</p>
+  </div>
+  <div class="page-head-actions">
+    <a href="{{ url_for('team_dashboard', league_code=league.league_code) }}" class="btn btn-ghost">← Back to dashboard</a>
+  </div>
+</section>
+
+{% with active='playoffs' %}{% include "_team_tools_nav.html" %}{% endwith %}
+
+{% if page.my %}
+<div class="stat-strip four">
+  <div class="stat">
+    <span>Current seed</span>
+    <strong>#{{ page.my.rank }}</strong>
+  </div>
+  <div class="stat">
+    <span>Playoff odds</span>
+    <strong>{{ '%.1f'|format(page.my.playoff_prob * 100) }}%</strong>
+  </div>
+  <div class="stat">
+    <span>Projected seed</span>
+    <strong>#{{ '%.1f'|format(page.my.avg_seed) }}</strong>
+  </div>
+  <div class="stat">
+    <span>Games left</span>
+    <strong>{{ page.remaining_weeks|length }}</strong>
+  </div>
+</div>
+
+<section class="card insight-hero">
+  <div class="card-head">
+    <span class="icon-tile" aria-hidden="true">🎯</span>
+    <div>
+      <h2>Your playoff path</h2>
+      <p>{{ page.simulations }} simulations of the remaining regular season. Top {{ page.playoff_teams }} make the playoffs.</p>
+    </div>
+  </div>
+
+  <div class="insight-grid">
+    <div class="insight-item">
+      <span class="eyebrow">Current record</span>
+      <strong>{{ page.my.wins }}-{{ page.my.losses }}{% if page.my.ties %}-{{ page.my.ties }}{% endif %}</strong>
+      <span class="muted">{{ '%.2f'|format(page.my.pf) }} points for</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Playoff probability</span>
+      <strong>{{ '%.1f'|format(page.my.playoff_prob * 100) }}%</strong>
+      <progress class="prob-track" value="{{ (page.my.playoff_prob * 100)|round(1) }}" max="100" aria-label="Playoff probability">{{ '%.0f'|format(page.my.playoff_prob * 100) }}%</progress>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Average seed</span>
+      <strong>#{{ '%.1f'|format(page.my.avg_seed) }}</strong>
+      <span class="muted">Across all simulations</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Regular season</span>
+      <strong>{{ 'Complete' if page.season_complete else 'In progress' }}</strong>
+      <span class="muted">Playoffs start in week {{ page.playoff_week_start }}</span>
+    </div>
+  </div>
+
+  {% if page.note %}
+    <p class="hint">{{ page.note }}</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">📈</span>
+    <div>
+      <h2>Seed distribution</h2>
+      <p>How often your team lands on each seed in the simulation.</p>
+    </div>
+  </div>
+  <div class="seed-bars">
+    {% for seed in page.my.seed_distribution %}
+      <div class="seed-bar {{ 'is-playoff' if seed.seed <= page.playoff_teams else '' }}">
+        <span class="seed-label">Seed {{ seed.seed }}</span>
+        <progress class="prob-track" value="{{ (seed.pct * 100)|round(1) }}" max="100" aria-label="Seed {{ seed.seed }} probability">{{ '%.0f'|format(seed.pct * 100) }}%</progress>
+        <span class="seed-pct">{{ '%.1f'|format(seed.pct * 100) }}%</span>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">🗓️</span>
+    <div>
+      <h2>Your remaining schedule</h2>
+      <p>Win chances use season points per game as team strength.</p>
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table compact-table">
+      <thead>
+        <tr>
+          <th>Week</th>
+          <th>Opponent</th>
+          <th>Their record</th>
+          <th>Your win chance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for game in page.my_remaining %}
+          <tr>
+            <td>{{ game.week }}</td>
+            <td><strong>{{ game.opponent }}</strong></td>
+            <td>{{ game.opponent_record }}</td>
+            <td>{{ '%.0f'|format(game.win_prob * 100) }}%</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty">No remaining regular-season matchups.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">🏁</span>
+    <div>
+      <h2>League playoff odds</h2>
+      <p>Current table with simulated playoff probability and average seed.</p>
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Seed</th>
+          <th>Team</th>
+          <th>Record</th>
+          <th>PF</th>
+          <th>Playoff odds</th>
+          <th>Avg. seed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in page.league_rows %}
+          <tr class="{{ 'is-me' if row.is_me else '' }}">
+            <td class="rank-cell">{{ row.rank }}</td>
+            <td>
+              <strong>{{ row.name }}</strong>
+              {% if row.is_me %}<span class="you-badge">You</span>{% endif %}
+            </td>
+            <td>{{ row.wins }}-{{ row.losses }}{% if row.ties %}-{{ row.ties }}{% endif %}</td>
+            <td>{{ '%.2f'|format(row.pf) }}</td>
+            <td>
+              <div class="odds-cell">
+                <progress class="prob-track" value="{{ (row.playoff_prob * 100)|round(1) }}" max="100" aria-label="{{ row.name }} playoff probability">{{ '%.0f'|format(row.playoff_prob * 100) }}%</progress>
+                <span>{{ '%.1f'|format(row.playoff_prob * 100) }}%</span>
+              </div>
+            </td>
+            <td>#{{ '%.1f'|format(row.avg_seed) }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">No playoff simulation available yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<p class="hint">
+  The simulator plays out every remaining matchup {{ page.simulations }} times. Team strength is season points per game,
+  each week adds scoring variance, and ties in the table are broken by simulated points for.
+</p>
+{% else %}
+  <p class="empty">Your team could not be found in the playoff simulation.</p>
+{% endif %}
+{% endblock %}

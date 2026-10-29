@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Standings & Power — {{ team.name }}{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div class="avatar avatar-xl avatar-0" aria-hidden="true">{{ team.name[:2]|upper }}</div>
+  <div class="page-head-copy">
+    <span class="eyebrow">Season {{ page.season }} · League table</span>
+    <h1>Standings &amp; power</h1>
+    <p>{{ team.name }} · {{ league.name }}</p>
+  </div>
+  <div class="page-head-actions">
+    <a href="{{ url_for('team_dashboard', league_code=league.league_code) }}" class="btn btn-ghost">← Back to dashboard</a>
+  </div>
+</section>
+
+{% with active='standings' %}{% include "_team_tools_nav.html" %}{% endwith %}
+
+{% if page.my %}
+<div class="stat-strip">
+  <div class="stat">
+    <span>Your seed</span>
+    <strong>#{{ page.my.rank }} <span class="stat-note">{{ 'Playoff spot' if page.my.playoff_spot else 'Outside the cut' }}</span></strong>
+  </div>
+  <div class="stat">
+    <span>Your record</span>
+    <strong>{{ page.my.wins }}-{{ page.my.losses }}{% if page.my.ties %}-{{ page.my.ties }}{% endif %}</strong>
+  </div>
+  <div class="stat">
+    <span>Power rank</span>
+    <strong>#{{ page.my.power_rank }} <span class="stat-note">{{ '%.3f'|format(page.my.power_score) }}</span></strong>
+  </div>
+</div>
+
+<section class="card insight-hero">
+  <div class="card-head">
+    <span class="icon-tile" aria-hidden="true">📊</span>
+    <div>
+      <h2>Your position</h2>
+      <p>{{ page.weeks_played }} week{{ '' if page.weeks_played == 1 else 's' }} scored · {{ page.games_left }} week{{ '' if page.games_left == 1 else 's' }} until the playoffs.</p>
+    </div>
+  </div>
+  <div class="insight-grid">
+    <div class="insight-item">
+      <span class="eyebrow">Record</span>
+      <strong>{{ page.my.wins }}-{{ page.my.losses }}{% if page.my.ties %}-{{ page.my.ties }}{% endif %}</strong>
+      <span class="muted">{{ '%.1f'|format(page.my.win_pct * 100) }}% win rate · {{ page.my.games_back|round(1) }} GB</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Points</span>
+      <strong>{{ '%.2f'|format(page.my.pf) }}</strong>
+      <span class="muted">{{ '%.1f'|format(page.my.ppg) }} per week · {{ '%.2f'|format(page.my.pa) }} against</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">All-play</span>
+      <strong>{{ page.my.all_play_wins }}-{{ page.my.all_play_losses }}{% if page.my.all_play_ties %}-{{ page.my.all_play_ties }}{% endif %}</strong>
+      <span class="muted">{{ '%.1f'|format(page.my.all_play_pct * 100) }}% against the whole league</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Luck</span>
+      <strong class="{{ 'delta-positive' if page.my.luck >= 0 else 'delta-negative' }}">{{ '%+.1f'|format(page.my.luck) }}</strong>
+      <span class="muted">{{ '%.1f'|format(page.my.expected_wins) }} expected wins</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Form</span>
+      <strong class="form-line">
+        {% for result in page.my.form %}
+          <span class="form-dot form-{{ result|lower }}">{{ result }}</span>
+        {% else %}
+          <span class="muted">No games yet</span>
+        {% endfor %}
+      </strong>
+      <span class="muted">Current streak: {{ page.my.streak }}</span>
+    </div>
+    <div class="insight-item">
+      <span class="eyebrow">Waiver budget</span>
+      <strong>{% if page.my.waiver_remaining is not none %}{{ '%.0f'|format(page.my.waiver_remaining) }}{% else %}—{% endif %}</strong>
+      <span class="muted">FAAB remaining</span>
+    </div>
+  </div>
+</section>
+{% else %}
+  <p class="empty">Your team could not be found in the standings.</p>
+{% endif %}
+
+<section class="card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">🏁</span>
+    <div>
+      <h2>League standings</h2>
+      <p>Top {{ page.playoff_teams }} make the playoffs. Your row is highlighted.</p>
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Team</th>
+          <th>Record</th>
+          <th>PF</th>
+          <th>PA</th>
+          <th>All-play</th>
+          <th>Luck</th>
+          <th>Form</th>
+          <th>Streak</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in page.standings %}
+          <tr class="{{ 'is-me' if row.is_me else '' }}">
+            <td class="rank-cell">{{ row.rank }}</td>
+            <td>
+              <strong>{{ row.name }}</strong>
+              {% if row.is_me %}<span class="you-badge">You</span>{% endif %}
+            </td>
+            <td>{{ row.wins }}-{{ row.losses }}{% if row.ties %}-{{ row.ties }}{% endif %}</td>
+            <td>{{ '%.2f'|format(row.pf) }}</td>
+            <td>{{ '%.2f'|format(row.pa) }}</td>
+            <td>{{ row.all_play_wins }}-{{ row.all_play_losses }}{% if row.all_play_ties %}-{{ row.all_play_ties }}{% endif %}</td>
+            <td class="{{ 'delta-positive' if row.luck >= 0 else 'delta-negative' }}">{{ '%+.1f'|format(row.luck) }}</td>
+            <td>
+              <span class="form-line">
+                {% for result in row.form %}
+                  <span class="form-dot form-{{ result|lower }}">{{ result }}</span>
+                {% else %}
+                  <span class="muted">—</span>
+                {% endfor %}
+              </span>
+            </td>
+            <td>{{ row.streak }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="empty">No standings available yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">⚡</span>
+    <div>
+      <h2>Power rankings</h2>
+      <p>40% record, 30% all-play, 20% scoring, 10% recent form.</p>
+    </div>
+  </div>
+  <div class="power-list">
+    {% for row in page.power %}
+      <div class="power-row {{ 'is-me' if row.is_me else '' }}">
+        <span class="power-rank">#{{ row.power_rank }}</span>
+        <div class="power-main">
+          <strong>{{ row.name }}</strong>
+          <span class="muted">{{ row.wins }}-{{ row.losses }}{% if row.ties %}-{{ row.ties }}{% endif %} · {{ '%.2f'|format(row.pf) }} PF · {{ row.streak }}</span>
+        </div>
+        <span class="power-score">{{ '%.3f'|format(row.power_score) }}</span>
+      </div>
+    {% else %}
+      <p class="empty">No power rankings available yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

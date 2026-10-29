@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Matchup Center — {{ team.name }}{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div class="avatar avatar-xl avatar-1" aria-hidden="true">{{ team.name[:2]|upper }}</div>
+  <div class="page-head-copy">
+    <span class="eyebrow">Week {{ page.week }} · Matchup center</span>
+    <h1>Your matchup</h1>
+    <p>{{ team.name }} · {{ league.name }}</p>
+  </div>
+  <div class="page-head-actions">
+    <a href="{{ url_for('team_dashboard', league_code=league.league_code) }}" class="btn btn-ghost">← Back to dashboard</a>
+  </div>
+</section>
+
+{% with active='matchup' %}{% include "_team_tools_nav.html" %}{% endwith %}
+
+<div class="week-switcher">
+  {% if page.week > 1 %}
+    <a class="btn btn-ghost btn-small" href="{{ url_for('team_matchup', league_code=league.league_code, week=page.week - 1) }}">← Week {{ page.week - 1 }}</a>
+  {% else %}
+    <span></span>
+  {% endif %}
+  <span class="week-switcher-label">
+    Week {{ page.week }}
+    {% if page.week == page.current_week %}<span class="badge">Current</span>{% endif %}
+    {% if page.is_final %}<span class="badge">Final</span>{% endif %}
+  </span>
+  {% if page.week < 22 %}
+    <a class="btn btn-ghost btn-small" href="{{ url_for('team_matchup', league_code=league.league_code, week=page.week + 1) }}">Week {{ page.week + 1 }} →</a>
+  {% else %}
+    <span></span>
+  {% endif %}
+</div>
+
+{% if page.my_pair %}
+  {% set my_side = page.my_pair.team_a if page.my_pair.team_a.is_me else page.my_pair.team_b %}
+  {% set opp_side = page.my_pair.team_b if page.my_pair.team_a.is_me else page.my_pair.team_a %}
+  <div class="stat-strip">
+    <div class="stat">
+      <span>Your record</span>
+      <strong>{{ my_side.record }}</strong>
+    </div>
+    <div class="stat">
+      <span>Opponent</span>
+      <strong>{{ opp_side.name if opp_side else 'Bye week' }}</strong>
+    </div>
+    <div class="stat">
+      <span>Win chance</span>
+      <strong>{% if my_side.win_prob is not none %}{{ '%.0f'|format(my_side.win_prob * 100) }}%{% else %}—{% endif %}</strong>
+    </div>
+    <div class="stat">
+      <span>{{ 'Final score' if page.is_final else 'Projection' }}</span>
+      <strong>{{ '%.1f'|format(my_side.points if page.is_final else my_side.projected) }}</strong>
+    </div>
+  </div>
+
+  <section class="card matchup-hero">
+    <div class="matchup-side {{ 'is-me' if my_side.is_me else '' }}">
+      <span class="eyebrow">You</span>
+      <h2>{{ my_side.name }}</h2>
+      <span class="muted">{{ my_side.record }}</span>
+      <strong class="matchup-score">{{ '%.1f'|format(my_side.points if page.is_final else my_side.projected) }}</strong>
+      <span class="muted">{{ 'Final' if page.is_final else 'Projected' }}</span>
+    </div>
+    <div class="matchup-vs">
+      <span class="matchup-vs-mark">vs</span>
+      {% if my_side.win_prob is not none %}
+        <progress class="prob-track" value="{{ (my_side.win_prob * 100)|round(1) }}" max="100" aria-label="Win probability">{{ '%.0f'|format(my_side.win_prob * 100) }}%</progress>
+        <span class="prob-label">{{ '%.0f'|format(my_side.win_prob * 100) }}% win chance</span>
+      {% endif %}
+    </div>
+    <div class="matchup-side">
+      <span class="eyebrow">Opponent</span>
+      <h2>{{ opp_side.name if opp_side else 'Bye week' }}</h2>
+      <span class="muted">{{ opp_side.record if opp_side else 'No matchup this week' }}</span>
+      <strong class="matchup-score">{{ '%.1f'|format(opp_side.points if page.is_final else opp_side.projected) if opp_side else '—' }}</strong>
+      <span class="muted">{{ 'Final' if page.is_final else 'Projected' }}</span>
+    </div>
+  </section>
+
+  {% if page.projection_note %}
+    <p class="hint">Some players had no weekly projection available. The team total falls back to the season average.</p>
+  {% endif %}
+
+  <div class="insight-columns">
+    <section class="card">
+      <div class="card-head">
+        <span class="icon-tile small" aria-hidden="true">🏈</span>
+        <div>
+          <h2>Your starters</h2>
+          <p>{{ 'Final points' if page.is_final else 'Actual and projected points' }}. Empty slots are skipped.</p>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table compact-table">
+          <thead>
+            <tr>
+              <th>Slot</th>
+              <th>Player</th>
+              <th>Points</th>
+              <th>Proj.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for player in my_side.starters %}
+              <tr>
+                <td><span class="slot-badge">{{ player.slot }}</span></td>
+                <td>
+                  <strong>{{ player.name }}</strong>
+                  <span class="muted">{{ player.pos }}{% if player.team %} · {{ player.team }}{% endif %}{% if player.injury %} · {{ player.injury }}{% endif %}</span>
+                </td>
+                <td>{{ '%.2f'|format(player.points) }}</td>
+                <td>{{ '%.2f'|format(player.proj) }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4" class="empty">No starters available.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <span class="icon-tile small" aria-hidden="true">🪑</span>
+        <div>
+          <h2>Bench watch</h2>
+          <p>Points left on your bench this week.</p>
+        </div>
+      </div>
+      <div class="bench-summary">
+        <div>
+          <span class="eyebrow">Bench points</span>
+          <strong>{{ '%.2f'|format(my_side.bench_points) }}</strong>
+        </div>
+        <div>
+          <span class="eyebrow">Top bench player</span>
+          <strong>{{ my_side.bench_top.name if my_side.bench_top else '—' }}</strong>
+          {% if my_side.bench_top %}<span class="muted">{{ '%.2f'|format(my_side.bench_top.points) }} pts</span>{% endif %}
+        </div>
+      </div>
+      {% if my_side.remaining %}
+        <p class="hint">{{ my_side.remaining|length }} starter{{ '' if my_side.remaining|length == 1 else 's' }} still without points: {{ my_side.remaining|map(attribute='name')|join(', ') }}.</p>
+      {% endif %}
+      <div class="bench-opponent">
+        <span class="eyebrow">Opponent bench</span>
+        <strong>{{ '%.2f'|format(opp_side.bench_points) if opp_side else '—' }}</strong>
+        {% if opp_side and opp_side.bench_top %}<span class="muted">{{ opp_side.bench_top.name }} · {{ '%.2f'|format(opp_side.bench_top.points) }} pts</span>{% endif %}
+      </div>
+    </section>
+  </div>
+{% else %}
+  <p class="empty">No matchup found for your team in week {{ page.week }}. You may be on a bye.</p>
+{% endif %}
+
+{% if page.other_pairs %}
+<section class="card">
+  <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">📋</span>
+    <div>
+      <h2>Rest of the league</h2>
+      <p>Every other matchup this week.</p>
+    </div>
+  </div>
+  <div class="matchup-list">
+    {% for pair in page.other_pairs %}
+      <div class="matchup-list-row">
+        <div class="matchup-list-team">
+          <strong>{{ pair.team_a.name }}</strong>
+          <span class="muted">{{ pair.team_a.record }}</span>
+        </div>
+        <div class="matchup-list-score">
+          <span>{{ '%.1f'|format(pair.team_a.points if page.is_final else pair.team_a.projected) }}</span>
+          <span class="muted">vs</span>
+          <span>{{ '%.1f'|format(pair.team_b.points if page.is_final else pair.team_b.projected) if pair.team_b else '—' }}</span>
+        </div>
+        <div class="matchup-list-team right">
+          <strong>{{ pair.team_b.name if pair.team_b else 'Bye' }}</strong>
+          <span class="muted">{{ pair.team_b.record if pair.team_b else '' }}</span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
