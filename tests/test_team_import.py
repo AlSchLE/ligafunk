@@ -1,5 +1,6 @@
 """Tests for Sleeper team import, username login and password rotation."""
 
+import json
 import os
 import re
 import secrets
@@ -7,6 +8,8 @@ import tempfile
 import time
 import unittest
 import uuid
+from datetime import datetime
+from pathlib import Path
 from unittest.mock import patch
 
 _TMP = tempfile.TemporaryDirectory()
@@ -337,6 +340,65 @@ class TeamImportTests(unittest.TestCase):
         self.assertIn("/dashboard", new_login.headers["Location"])
 
         self.assertIsNotNone(current_sid)
+
+    def test_auto_backup_uses_dated_ligafunk_filename(self):
+        fixed_now = datetime(2026, 10, 29, 14, 30, 0)
+        with tempfile.TemporaryDirectory() as tmp, patch.object(
+            app_module, "BACKUP_DIR", Path(tmp)
+        ), patch.object(app_module, "datetime") as mock_datetime:
+            mock_datetime.now.return_value = fixed_now
+            app_module._auto_backup()
+
+            backup = Path(tmp) / "ligafunk_291026.json"
+            self.assertTrue(backup.is_file())
+            data = json.loads(backup.read_text(encoding="utf-8"))
+            self.assertEqual(data["timestamp"], fixed_now.isoformat())
+            self.assertTrue(any(
+                league["league_code"] == self.league_code
+                for league in data["leagues"]
+            ))
+
+    def test_admin_backup_download_has_dated_filename(self):
+        self._admin_session()
+        response = self.client.get("/admin/backup")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertRegex(
+            response.headers.get("Content-Disposition", ""),
+            r'^attachment; filename="ligafunk_\d{6}\.json"$',
+        )
+        self.assertRegex(
+            response.get_json()["exported_at"],
+            r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}",
+        )
+
+    def test_download_backup_accepts_new_and_legacy_names(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backup_dir = Path(tmp)
+            new_backup = backup_dir / "ligafunk_291026.json"
+            legacy_backup = backup_dir / "sleeper_backup_20261029_143000.json"
+            new_backup.write_text('{"leagues": []}', encoding="utf-8")
+            legacy_backup.write_text('{"leagues": []}', encoding="utf-8")
+
+            self._admin_session()
+            with patch.object(app_module, "BACKUP_DIR", backup_dir):
+                for filename in (new_backup.name, legacy_backup.name):
+                    response = self.client.get(
+                        f"/admin/download-backup/{filename}"
+                    )
+                    self.assertEqual(response.status_code, 200)
+                    self.assertIn(filename, response.headers["Content-Disposition"])
+                    self.assertEqual(response.get_json(), {"leagues": []})
+                    response.close()
+
+                missing = self.client.get(
+                    "/admin/download-backup/ligafunk_010126.json"
+                )
+                self.assertEqual(missing.status_code, 404)
+                invalid = self.client.get(
+                    "/admin/download-backup/not-a-backup.json"
+                )
+                self.assertEqual(invalid.status_code, 404)
 
 
 if __name__ == "__main__":

@@ -184,11 +184,25 @@ except OSError:
     pass
 MAX_BACKUPS = 10
 
+# New dated name plus the previous timestamped format, so existing local
+# backups stay downloadable after the naming change.
+_BACKUP_NAME_RE = re.compile(
+    r"^(?:ligafunk_\d{6}|sleeper_backup_\d{8}_\d{6})\.json$"
+)
+
+
+def _backup_files():
+    """Return known backup files, newest first."""
+    candidates = list(BACKUP_DIR.glob("ligafunk_*.json"))
+    candidates.extend(BACKUP_DIR.glob("sleeper_backup_*.json"))
+    backups = [path for path in candidates if _BACKUP_NAME_RE.fullmatch(path.name)]
+    return sorted(backups, key=lambda path: path.stat().st_mtime, reverse=True)
+
 
 def _auto_backup():
     """Create a JSON backup of all data."""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_file = BACKUP_DIR / f"sleeper_backup_{timestamp}.json"
+    now = datetime.now()
+    backup_file = BACKUP_DIR / f"ligafunk_{now:%d%m%y}.json"
 
     conn = get_db()
     try:
@@ -204,7 +218,7 @@ def _auto_backup():
         "teams": [dict(t) for t in teams],
         "recaps": [dict(r) for r in recaps],
         "webhooks": [dict(w) for w in webhooks],
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": now.isoformat(),
     }
 
     with open(backup_file, "w", encoding="utf-8") as f:
@@ -214,11 +228,12 @@ def _auto_backup():
     except OSError:
         pass
 
-    # Cleanup old backups
-    backups = sorted(BACKUP_DIR.glob("sleeper_backup_*.json"))
-    while len(backups) > MAX_BACKUPS:
-        backups[0].unlink()
-        backups = backups[1:]
+    # Keep only the newest backups, regardless of the filename format.
+    for old_backup in _backup_files()[MAX_BACKUPS:]:
+        try:
+            old_backup.unlink()
+        except OSError:
+            pass
 
     log.info("Auto-backup created: %s", backup_file.name)
 
@@ -600,17 +615,19 @@ def backup():
     finally:
         conn.close()
 
+    now = datetime.now()
     data = {
         "leagues": [dict(l) for l in leagues],
         "teams": [dict(t) for t in teams],
         "recaps": [dict(r) for r in recaps],
         "webhooks": [dict(w) for w in webhooks],
-        "exported_at": datetime.now().isoformat(),
+        "exported_at": now.isoformat(),
     }
-    return jsonify(data)
-
-
-_BACKUP_NAME_RE = re.compile(r"^sleeper_backup_\d{8}_\d{6}\.json$")
+    response = jsonify(data)
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="ligafunk_{now:%d%m%y}.json"'
+    )
+    return response
 
 
 @app.route("/admin/download-backup/<filename>")
@@ -1121,7 +1138,7 @@ def admin():
         """).fetchall()
     finally:
         conn.close()
-    backups = sorted(BACKUP_DIR.glob("sleeper_backup_*.json"), reverse=True)[:10]
+    backups = _backup_files()[:10]
 
     # Never echo full webhook URLs/secrets back into the admin page.
     masked_webhooks = []

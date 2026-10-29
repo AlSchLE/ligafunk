@@ -186,6 +186,10 @@ angelegt.
 Im Admin-Panel lassen sich Team-Passwörter zurücksetzen (dabei werden alle
 aktiven Sessions des Teams sofort ungültig) und Webhooks wieder entfernen.
 
+Backups werden als `ligafunk_DDMMYY.json` heruntergeladen und automatisch unter
+`backups/` abgelegt (`DDMMYY` = Tag/Monat/Jahr). Die automatische Datei wird am
+selben Tag mit dem jeweils aktuellen Stand überschrieben.
+
 ## Liga-URL
 
 Jede Liga erhält einen unguessbaren 12-stelligen Code, z.B.:
