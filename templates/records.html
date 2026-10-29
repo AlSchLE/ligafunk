@@ -109,6 +109,49 @@
 
 <section class="card">
   <div class="card-head">
+    <span class="icon-tile small" aria-hidden="true">🧮</span>
+    <div>
+      <h2>All-time manager standings</h2>
+      <p>Every manager is tracked by Sleeper user ID, even when the team name changed.</p>
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Manager</th>
+          <th>Record</th>
+          <th>Win %</th>
+          <th>Points for</th>
+          <th>Points against</th>
+          <th>Games</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in page.all_time.standings %}
+          <tr class="{{ 'is-me' if row.is_me else '' }}">
+            <td class="rank-cell">{{ row.rank }}</td>
+            <td>
+              <strong>{{ row.owner_name or row.name }}</strong>
+              {% if row.is_me %}<span class="you-badge">You</span>{% endif %}
+            </td>
+            <td>{{ row.wins }}-{{ row.losses }}{% if row.ties %}-{{ row.ties }}{% endif %}</td>
+            <td>{{ '%.1f'|format(row.win_pct * 100) }}%</td>
+            <td>{{ '%.2f'|format(row.pf) }}</td>
+            <td>{{ '%.2f'|format(row.pa) }}</td>
+            <td>{{ row.games }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="empty">No all-time standings available yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
     <span class="icon-tile small" aria-hidden="true">🏛️</span>
     <div>
       <h2>All-time records</h2>
