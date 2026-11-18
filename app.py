@@ -81,6 +81,7 @@ from recapcore.options import (
     normalize_style,
     normalize_theme,
 )
+from version import VERSION, CHANGELOG
 
 app.secret_key = SECRET_KEY
 app.config["SESSION_COOKIE_SECURE"] = IS_PRODUCTION
@@ -2014,6 +2015,16 @@ def league_rss(league_code):
     response = make_response(rss)
     response.headers["Content-Type"] = "application/rss+xml"
     return response
+
+
+# ============================================================
+# Version / About
+# ============================================================
+
+@app.route("/info")
+def info():
+    """Show the current version and a short changelog."""
+    return render_template("info.html", version=VERSION, changelog=CHANGELOG)
 
 
 # ============================================================

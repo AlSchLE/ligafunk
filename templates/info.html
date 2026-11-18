@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}About — Ligafunk{% endblock %}
+
+{% block content %}
+<div class="auth-shell" style="max-width: 900px;">
+  <div class="auth-visual">
+    <span class="eyebrow">About</span>
+    <h1>Ligafunk</h1>
+    <p>The fantasy league command center — recaps, start/sit advice and waiver wire.</p>
+  </div>
+
+  <div class="card login-card" style="max-width: 720px;">
+    <div class="card-head">
+      <span class="icon-tile" aria-hidden="true">ℹ️</span>
+      <div>
+        <h2>Version</h2>
+        <p class="hint" style="margin-top: 6px;">{{ version }}</p>
+      </div>
+    </div>
+
+    <div style="border-top: 1px solid var(--border); padding-top: 14px; margin-top: 16px;">
+      <h3 style="margin-top: 0; font-size: 1.05rem; color: var(--text-bright);">Changelog</h3>
+      <p class="hint" style="margin-top: 4px;">Latest changes shipped on the live site.</p>
+      <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+        {% for entry in changelog %}
+          <li style="padding: 4px 0; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
+            <span style="font-weight: 700; color: var(--accent);">{{ entry.version }}</span>
+            <span style="color: var(--text-dim); font-size: 0.9rem;">&nbsp;— {{ entry.date }}</span>
+            <ul style="margin: 4px 0 0 18px; padding: 0; list-style-type: disc;">
+              {% for change in entry.changes %}
+                <li style="margin: 2px 0; font-size: 0.92rem; color: var(--text);">{{ change }}</li>
+              {% endfor %}
+            </ul>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px;">
+      <h3 style="margin-top: 0; font-size: 1.05rem; color: var(--text-bright);">Running locally</h3>
+      <pre class="hint" style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 0.85rem; overflow-x: auto;">
+export FLASK_DEBUG=1
+python app.py        # http://localhost:5000
+      </pre>
+    </div>
+
+    <p class="hint" style="margin-top: 14px;">
+      Ligafunk &amp; the Sleeper football API. Code, data and tooling live in the
+      <code>ligafunk</code> repo. See <a href="https://github.com/AlSchLE/ligafunk" target="_blank" rel="noopener">github.com/AlSchLE/ligafunk</a>.
+    </p>
+  </div>
+</div>
+{% endblock %}

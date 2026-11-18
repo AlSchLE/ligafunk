@@ -2026,6 +2026,19 @@ code {
   color: var(--primary);
 }
 
+/* Version footer */
+.footer-inner.footer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
 .mobile-dock {
   display: none;
 }
