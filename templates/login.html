@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+
 {% block title %}Login — {{ league.name }}{% endblock %}
 
 {% block content %}
@@ -7,10 +8,6 @@
     <span class="eyebrow">Team access</span>
     <h1>{{ league.name }}</h1>
     <p>Sign in to unlock your private team tools: recaps, Start/Sit advice and waiver targets.</p>
-    <div class="auth-code">
-      <span>League code</span>
-      <code>{{ league.league_code }}</code>
-    </div>
     <div class="mini-list">
       <span><span class="check" aria-hidden="true">✓</span> No cross-team access</span>
       <span><span class="check" aria-hidden="true">✓</span> Session-based login</span>
@@ -22,7 +19,7 @@
       <span class="icon-tile small" aria-hidden="true">🔐</span>
       <div>
         <h2>Team login</h2>
-        <p>Enter your Sleeper username and team password.</p>
+        <p>Enter your username and team password.</p>
       </div>
     </div>
 
@@ -33,7 +30,7 @@
     <form method="post">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
       <div class="form-group">
-        <label for="team-username">Sleeper username</label>
+        <label for="team-username">Username</label>
         <input id="team-username" type="text" name="username" required maxlength="200"
                autocomplete="username" autocapitalize="none" spellcheck="false"
                placeholder="Sleeper username">
@@ -50,7 +47,6 @@
       Use the Sleeper username from your invitation. Teams created before the
       username login can still use their team name.
     </p>
-    <p class="hint">League code: <code>{{ league.league_code }}</code></p>
   </div>
 </div>
 {% endblock %}

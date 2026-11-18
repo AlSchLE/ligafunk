@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+
 {% block title %}Ligafunk — Fantasy league command center{% endblock %}
 
 {% block content %}
@@ -15,42 +16,6 @@
       <span class="trust-item"><span class="dot" aria-hidden="true"></span> Weekly recaps</span>
       <span class="trust-item"><span class="dot" aria-hidden="true"></span> Start/Sit advice</span>
       <span class="trust-item"><span class="dot" aria-hidden="true"></span> Waiver wire</span>
-    </div>
-  </div>
-
-  <div class="hero-panel">
-    <div class="panel-head">
-      <div class="sport-lockup">
-        <span class="sport-icon" id="sport-icon" aria-hidden="true">🏆</span>
-        <div>
-          <span class="panel-kicker">League pulse</span>
-          <strong id="sport-name">Fantasy Sports</strong>
-        </div>
-      </div>
-      <span class="live-pill"><span class="live-dot" aria-hidden="true"></span> Ready</span>
-    </div>
-
-    <div class="hero-recap">
-      <div class="hero-recap-top">
-        <span class="week-badge">Week 7</span>
-        <span class="muted">Recap preview</span>
-      </div>
-      <h3>The comeback that changed the season.</h3>
-      <p>Turn every matchup, waiver move and locker-room moment into a story your league actually wants to read.</p>
-      <div class="hero-recap-foot">
-        <span class="avatar-stack" aria-hidden="true">
-          <span class="mini-avatar avatar-0">AL</span>
-          <span class="mini-avatar avatar-1">MK</span>
-          <span class="mini-avatar avatar-2">JD</span>
-        </span>
-        <span class="muted">Made for your league</span>
-      </div>
-    </div>
-
-    <div class="hero-metrics">
-      <div><strong>3</strong><span>Tools in one hub</span></div>
-      <div><strong>10s</strong><span>Auto-save</span></div>
-      <div><strong>1</strong><span>Home for your league</span></div>
     </div>
   </div>
 </section>
@@ -91,16 +56,13 @@
   </div>
 </section>
 
-<section class="login-section" id="team-login">
-  <div class="login-copy">
-    <span class="eyebrow">Team access</span>
-    <h2>Your locker room is waiting.</h2>
-    <p>Log in with your league code and team password to generate recaps, get Start/Sit advice and work the waiver wire.</p>
-    <div class="mini-list">
-      <span><span class="check" aria-hidden="true">✓</span> Private team tools</span>
-      <span><span class="check" aria-hidden="true">✓</span> No cross-team access</span>
-      <span><span class="check" aria-hidden="true">✓</span> Share-ready recaps</span>
+<section class="section">
+  <div class="section-head">
+    <div>
+      <span class="eyebrow">Your private tools</span>
+      <h2>Team login</h2>
     </div>
+    <p>Sign in with your league code and team password to generate recaps, get Start/Sit advice and work the waiver wire.</p>
   </div>
 
   <div class="card login-card home-login-card">
@@ -108,7 +70,7 @@
       <span class="icon-tile small" aria-hidden="true">🔐</span>
       <div>
         <h3>Team login</h3>
-        <p>League code + team password</p>
+        <p>Enter your username and team password.</p>
       </div>
     </div>
 
@@ -129,24 +91,6 @@
       </form>
       <p class="hint">Your league code is shared by your commissioner.</p>
     {% endif %}
-  </div>
-</section>
-
-<section class="section">
-  <div class="card brand-lab">
-    <div class="card-head">
-      <span class="icon-tile" aria-hidden="true">🎨</span>
-      <div>
-        <h3>League theme lab</h3>
-        <p>Preview the branding for a Sleeper league.</p>
-      </div>
-    </div>
-    <div class="brand-lab-row">
-      <input type="text" id="league-id-input" class="form-input"
-             placeholder="Sleeper league ID" autocomplete="off">
-      <button type="button" data-action="update-branding" class="btn">Update preview</button>
-    </div>
-    <p class="hint">This only changes the preview colors on this page.</p>
   </div>
 </section>
 {% endblock %}

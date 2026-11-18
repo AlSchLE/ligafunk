@@ -122,9 +122,18 @@ def candidate_ids(
     scoring: dict[str, Any],
     trending: list[str],
     handcuff_teams: set[str],
+    actual_positions: set[str] | None = None,
 ) -> list[str]:
+    """Return ordered candidate player ids for free agency.
+
+    Candidates are filtered to the positions the team actually uses. When
+    actual_positions is None, the league-level slots (league roster config) are
+    used, preserving the historical behaviour for leagues where the team uses
+    every configured position.
+    """
     ranked: list[tuple[float, str]] = []
     extra: list[str] = []
+    slot_filter = actual_positions if actual_positions is not None else slots
     for pid, info in players.items():
         if pid in rostered:
             continue
@@ -136,7 +145,7 @@ def candidate_ids(
         if not team:
             continue
         positions = player_pos_set(info, pid)
-        if not any(slot_accepts(slot, positions) for slot in slots):
+        if not any(slot_accepts(slot, positions) for slot in slot_filter):
             continue
         pts = league_points(proj.get(pid) or {}, scoring)
         dco = info.get("dco") or ""
