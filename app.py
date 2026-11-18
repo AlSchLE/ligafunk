@@ -291,6 +291,7 @@ def inject_csrf_token():
         "recap_styles": RECAP_STYLES,
         "recap_themes": RECAP_THEMES,
         "current_team": _get_current_team(),
+        "version": VERSION,
     }
 
 
